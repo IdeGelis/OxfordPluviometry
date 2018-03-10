@@ -1,2 +1,2 @@
-# OxfordPluviometry
-Exploitation of data on pluviometry at Oxford by mean squarred and Ransac method.
+# OxfordTemperature
+Exploitation of data on temperature at Oxford by mean squarred and Ransac method.
