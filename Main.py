@@ -7,61 +7,52 @@ Created on Wed Feb 28 19:09:59 2018
 
 import numpy as np
 import matplotlib.pyplot as plt
-#from Reader import read
+from Reader import read
 
 #import scipy as sc
 #import lmfit
 
-def mod(t, A, omega,phi,cst):
-    return A*np.cos(omega*t + phi)+ cst
-    
-def triang(t, A, omega,phi,B, omega2,phi2,cst):
-    return B*(np.cos(omega2*t+phi2))**2 + A*np.cos(omega*t + phi)+ cst
-    
-def mod2(t, A, omega, B, omega2,cst):
-    return A*np.sin(omega*t)+ B*np.cos(omega2*t) + cst
-    
-def read(fname, date_deb, date_fin): 
-    data = np.genfromtxt(fname, skip_header=7,skip_footer=13)
-    return data
+#def mod(t, A, omega,phi,cst):
+#    return A*np.cos(omega*t + phi)+ cst
+#    
+
     
 if __name__=="__main__":
-    
-    data = read("oxforddata.txt",1,1)
-    nb_data = len(data)
     nb_annee =25
+    date_deb = 1900   
+    temperature, tps = read("oxforddata.txt",date_deb,nb_annee)
     
     
     #param, b = sc.optimize.curve_fit(mod,[i for i in range (nb_annee*12)],data[96:nb_annee*12+96,2])
     
     plt.figure()
-    plt.plot([i for i in range (nb_annee*12)],data[0:nb_annee*12,2])
-    #plt.plot([i for i in range (nb_annee*12)],[mod2(i,param[0],param[1],param[2],param[3],param[4]) for i in range (nb_annee*12)])
-    #plt.plot([i for i in range (nb_annee*12)],[mod(i,param[0],param[1],param[2],param[3]) for i in range (nb_annee*12)])
-    #plt.plot([i for i in range (nb_annee*12)],[mod3(i,param[0],param[1],param[2],param[3],param[4],param[5],param[6]) for i in range (nb_annee*12)])
-
+    plt.plot(tps,temperature)
+    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+    plt.title(titre)
+    plt.xlabel("temps [annees]")
+    plt.ylabel("temperature [°C]")
     plt.show()
     
+    """ Le modèle testé est A*cos(omega*tps + phi) + cste """
+    
+    """ Initialisation des matrices pour les moindres carrées """
+    
+    B = temperature
+    nb_data = B.shape[0]
+    
+    # X : vecteur des paramètres A, omega, phi, constante initialisé à 0
+    X = np.array([[0,0,0,0]]).reshape(4,1)
+    
+    # Matrice A jacobienne du modèle linéarisé
+    A = np.ones((nb_data,4))
+    A[:,0] = np.cos(X[1,0]*tps + X[2,0])
+    A[:,1] = -X[0,0]*tps*np.sin(X[1,0]*tps + X[2,0])
+    A[:,2] = -X[0,0]*np.sin(X[1,0]*tps + X[2,0])
+    
+    # Matrice de poids, identité par défaut
+    P = np.eye(nb_data)
+    
+    """ Moindres carrées """
     
     
-#    gmod = lmfit.Model(mod)
-#    resultAN = gmod.fit(data[0:nb_annee*12,2], x = [i for i in range (nb_annee*12)], A1 = 0, B1 = 0)
-#    
-#    print(resultAN.fit_report())
     
-    
-#    annee_debut = int(pluvio[0][0])
-#    annee_fin = int(pluvio[-1][0])
-#    nb_annee = annee_fin - annee_debut + 1
-#    
-#    rain = []
-#    year = []
-#    for m in range(nb_annee*12):
-#        rain.append(pluvio[m][5])
-#        year.append(pluvio[m][0])
-#        
-#    plt.title("Precipitation à Oxford de 1853 a 2016")
-#    plt.xlabel("temps [annees]")
-#    plt.ylabel("precipitation [mm]")
-#    plt.plot(rain,"-.")
-#    plt.show()
