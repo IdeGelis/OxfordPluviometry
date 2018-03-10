@@ -22,7 +22,7 @@ def mod(tps, param):
 
     
 if __name__=="__main__":
-    nb_annee = 10
+    nb_annee = 50
     # Date du début de l'étude, date_deb >=1853
     date_deb = 1853   
     temperature, tps = read("oxforddata.txt",date_deb,nb_annee)
@@ -85,7 +85,6 @@ if __name__=="__main__":
         print(sigma0_2)
         
         X = Xchap
-        l = lchap
     
     """ Affichage des résultats des MC """
     
@@ -93,7 +92,7 @@ if __name__=="__main__":
     plt.plot(tps,temperature, "o", label = "Observations")
     plt.plot(tps, mod(tps,X))
     #Test pour les params initiaux
-    plt.plot(tps, mod(tps,np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)))
+    #•plt.plot(tps, mod(tps,np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)))
     titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
     plt.title(titre)
     plt.xlabel("temps [annees]")
@@ -104,7 +103,7 @@ if __name__=="__main__":
     Les MC sont fait et il semble fonctionner cependant seulement quand on donne
     des valeur initiales pas trop éloignées de la véritées.
     Il faut maintenant faire les graphes de résidus, etc...
-    Par contre sigma0_2 semble trsè proche de 0 et non proche de 1...???
+    Par contre sigma0_2 semble se stabiliser très vite mais proche de 2.6 et non de 1...???
     """
     
         
