@@ -22,7 +22,7 @@ def mod(tps, param):
 
     
 if __name__=="__main__":
-    nb_annee =25
+    nb_annee = 2
     date_deb = 1900   
     temperature, tps = read("oxforddata.txt",date_deb,nb_annee)
     
@@ -42,7 +42,7 @@ if __name__=="__main__":
     nb_data = temperature.shape[0]
     
     # X : vecteur des paramètres A, omega, phi, constante initialisé à 0
-    X = np.array([[1,1,1,0]]).reshape(4,1)
+    X = np.array([[1,1,1,1]]).reshape(4,1)
     
     # Données
     l = temperature
@@ -54,14 +54,14 @@ if __name__=="__main__":
     """ Moindres carrées """
     
     # Itérations 
-    for k in range(100):
+    for k in range(10):
         # Matrice A jacobienne du modèle linéarisé
         A = np.ones((nb_data,4))
         A[:,0] = np.cos(X[1,0]*tps + X[2,0])
         A[:,1] = -X[0,0]*tps*np.sin(X[1,0]*tps + X[2,0])
         A[:,2] = -X[0,0]*np.sin(X[1,0]*tps + X[2,0])
         
-        B = temperature - mod(tps,X).reshape((nb_data,1))
+        B = l - mod(tps,X).reshape((nb_data,1))
         
         # N = A.T*P*A, K = A.T*P*B
         N = np.dot(np.dot(A.T,P),A)
@@ -72,7 +72,7 @@ if __name__=="__main__":
         
         Xchap = X+dXchap
 
-        vchap = B - np.dot(A,Xchap)
+        vchap = B - np.dot(A,dXchap)
         lchap = l-vchap
         
         # Matrice de variance covariance
@@ -84,17 +84,28 @@ if __name__=="__main__":
         print(sigma0_2)
         
         X = Xchap
+        l = lchap
     
-    """ Affichage des résultats des MC """
+        """ Affichage des résultats des MC """
     
-    plt.figure()
-    plt.plot(tps,temperature)
-    plt.plot(tps, mod(tps,X))
-    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
-    plt.title(titre)
-    plt.xlabel("temps [annees]")
-    plt.ylabel("temperature [°C]")
-    plt.show()
+        plt.figure()
+        plt.plot(tps,temperature)
+        plt.plot(tps, mod(tps,X))
+        titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+        plt.title(titre)
+        plt.xlabel("temps [annees]")
+        plt.ylabel("temperature [°C]")
+        plt.show()
+    
+#    X=np.arange(-15,15,0.1)
+#    Y0=[a0*X[i]**2+b0*X[i]+c0 for i in range(len(X))]
+#    Ychap=[xchap[0][0]*X[i]**2+xchap[1][0]*X[i]+xchap[2][0] for i in range(len(X))]
+#    
+#
+#    plt.figure()    
+#    plt.plot(X,Ychap, color="r", label="Xchapeau Polynome de degre 2")
+#    plt.legend()
+#    plt.show()
     
 
 
