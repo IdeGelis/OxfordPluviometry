@@ -22,7 +22,7 @@ def mod(tps, param):
 
     
 if __name__=="__main__":
-    nb_annee = 2
+    nb_annee = 10
     date_deb = 1900   
     temperature, tps = read("oxforddata.txt",date_deb,nb_annee)
     
@@ -42,7 +42,7 @@ if __name__=="__main__":
     nb_data = temperature.shape[0]
     
     # X : vecteur des paramètres A, omega, phi, constante initialisé à 0
-    X = np.array([[1,1,1,1]]).reshape(4,1)
+    X = np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)
     
     # Données
     l = temperature
@@ -89,8 +89,10 @@ if __name__=="__main__":
         """ Affichage des résultats des MC """
     
         plt.figure()
-        plt.plot(tps,temperature)
+        plt.plot(tps,temperature, "o", label = "Observations")
         plt.plot(tps, mod(tps,X))
+        #Test pour les params initiaux
+        plt.plot(tps, mod(tps,np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)))
         titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
         plt.title(titre)
         plt.xlabel("temps [annees]")
