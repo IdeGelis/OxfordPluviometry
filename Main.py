@@ -7,9 +7,9 @@ Created on Wed Feb 28 19:09:59 2018
 
 import numpy as np
 import matplotlib.pyplot as plt
-from Reader import read
+#from Reader import read
 
-import scipy as sc
+#import scipy as sc
 #import lmfit
 
 def mod(t, A, omega,phi,cst):
@@ -20,20 +20,25 @@ def triang(t, A, omega,phi,B, omega2,phi2,cst):
     
 def mod2(t, A, omega, B, omega2,cst):
     return A*np.sin(omega*t)+ B*np.cos(omega2*t) + cst
+    
+def read(fname, date_deb, date_fin): 
+    data = np.genfromtxt(fname, skip_header=7,skip_footer=13)
+    return data
+    
 if __name__=="__main__":
     
     data = read("oxforddata.txt",1,1)
     nb_data = len(data)
-    nb_annee =4
+    nb_annee =25
     
     
-    param, b = sc.optimize.curve_fit(mod3,[i for i in range (nb_annee*12)],data[96:nb_annee*12+96,2])
+    #param, b = sc.optimize.curve_fit(mod,[i for i in range (nb_annee*12)],data[96:nb_annee*12+96,2])
     
     plt.figure()
     plt.plot([i for i in range (nb_annee*12)],data[0:nb_annee*12,2])
     #plt.plot([i for i in range (nb_annee*12)],[mod2(i,param[0],param[1],param[2],param[3],param[4]) for i in range (nb_annee*12)])
     #plt.plot([i for i in range (nb_annee*12)],[mod(i,param[0],param[1],param[2],param[3]) for i in range (nb_annee*12)])
-    plt.plot([i for i in range (nb_annee*12)],[mod3(i,param[0],param[1],param[2],param[3],param[4],param[5],param[6]) for i in range (nb_annee*12)])
+    #plt.plot([i for i in range (nb_annee*12)],[mod3(i,param[0],param[1],param[2],param[3],param[4],param[5],param[6]) for i in range (nb_annee*12)])
 
     plt.show()
     
