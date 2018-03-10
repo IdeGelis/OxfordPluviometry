@@ -23,7 +23,8 @@ def mod(tps, param):
     
 if __name__=="__main__":
     nb_annee = 10
-    date_deb = 1900   
+    # Date du début de l'étude, date_deb >=1853
+    date_deb = 1853   
     temperature, tps = read("oxforddata.txt",date_deb,nb_annee)
     
     #param, b = sc.optimize.curve_fit(mod,[i for i in range (nb_annee*12)],data[96:nb_annee*12+96,2])
@@ -86,28 +87,27 @@ if __name__=="__main__":
         X = Xchap
         l = lchap
     
-        """ Affichage des résultats des MC """
+    """ Affichage des résultats des MC """
     
-        plt.figure()
-        plt.plot(tps,temperature, "o", label = "Observations")
-        plt.plot(tps, mod(tps,X))
-        #Test pour les params initiaux
-        plt.plot(tps, mod(tps,np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)))
-        titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
-        plt.title(titre)
-        plt.xlabel("temps [annees]")
-        plt.ylabel("temperature [°C]")
-        plt.show()
+    plt.figure()
+    plt.plot(tps,temperature, "o", label = "Observations")
+    plt.plot(tps, mod(tps,X))
+    #Test pour les params initiaux
+    plt.plot(tps, mod(tps,np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)))
+    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+    plt.title(titre)
+    plt.xlabel("temps [annees]")
+    plt.ylabel("temperature [°C]")
+    plt.show()
     
-#    X=np.arange(-15,15,0.1)
-#    Y0=[a0*X[i]**2+b0*X[i]+c0 for i in range(len(X))]
-#    Ychap=[xchap[0][0]*X[i]**2+xchap[1][0]*X[i]+xchap[2][0] for i in range(len(X))]
-#    
-#
-#    plt.figure()    
-#    plt.plot(X,Ychap, color="r", label="Xchapeau Polynome de degre 2")
-#    plt.legend()
-#    plt.show()
+    """
+    Les MC sont fait et il semble fonctionner cependant seulement quand on donne
+    des valeur initiales pas trop éloignées de la véritées.
+    Il faut maintenant faire les graphes de résidus, etc...
+    Par contre sigma0_2 semble trsè proche de 0 et non proche de 1...???
+    """
+    
+        
     
 
 
