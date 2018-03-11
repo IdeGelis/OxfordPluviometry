@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from Reader import read
 
-#import scipy as sc
+import scipy as sc
 #import lmfit
 
 def mod(tps, param):
@@ -99,10 +99,19 @@ if __name__=="__main__":
     plt.ylabel("temperature [°C]")
     plt.show()
     
+    
+    plt.figure()
+    plt.title("Histogramme des résidus")
+    # Afficher la courbe de la loi normale de moyenne 0 et d'écart type sigma0
+    #x = np.linspace(0, 6*np.sqrt(sigma0_2), 100)
+    #plt.plot(x,sc.stats.norm.pdf(x,0,np.sqrt(sigma0_2)))
+    plt.hist(vchap)
+    plt.show()
+#    sc.
     """
     Les MC sont fait et il semble fonctionner cependant seulement quand on donne
     des valeur initiales pas trop éloignées de la véritées.
-    Il faut maintenant faire les graphes de résidus, etc...
+    Il faut maintenant faire les graphes que David voulait pour une estimation par MC la plus complète possible.
     Par contre sigma0_2 semble se stabiliser très vite mais proche de 2.6 et non de 1...???
     """
     
