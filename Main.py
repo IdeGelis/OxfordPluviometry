@@ -44,7 +44,7 @@ if __name__=="__main__":
     
     # X : vecteur des paramètres A, omega, phi, constante initialisé à 0
     X = np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)
-    
+    #X = np.array([[1,1,1,1]]).reshape(4,1)
     # Données
     l = temperature
     
@@ -116,7 +116,19 @@ if __name__=="__main__":
     """
     
         
+    """ Faire élimination des points faux en mode automatique """
     
+    """
+    Poser un critere d'élimination : pex à 3*sigma pour trouver et éliminer les erreurs dans les données
+    ou
+    Estimer de manière itérative des droites de regression en eliminant a chaque iteration le 
+    residu le plus fort. Poser un critere d'arret=0.8 pex
+    
+    Idee : Calculer l'écart entre la valeur et le modele estime. Puis faire un predicat sur cette valeur :
+        si |ecart| > ... : elimination
+        si ecart <= ... : conservation
+    Puis vérification du modèle.
+    """
 
 
     
