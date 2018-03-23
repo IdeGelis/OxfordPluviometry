@@ -19,37 +19,17 @@ def mod(tps, param):
     res = param[0,0]*np.cos(param[1,0]*tps + param[2,0])+ param[3,0]
     return res
     
-
-    
-if __name__=="__main__":
-    nb_annee = 10
-    # Date du début de l'étude, date_deb >=1853
-    date_deb = 1853   
-    temperature, tps = read("oxforddata.txt",date_deb,nb_annee)
-    
-    #param, b = sc.optimize.curve_fit(mod,[i for i in range (nb_annee*12)],data[96:nb_annee*12+96,2])
-    
-    plt.figure()
-    plt.plot(tps,temperature)
-    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
-    plt.title(titre)
-    plt.xlabel("temps [annees]")
-    plt.ylabel("temperature [°C]")
-    plt.show()
-    
-    """ 
-    Le modèle testé est A*cos(omega*tps + phi) + cste 
-    Il y a donc 4 paramètres.    
+def MC(temperature,tps):
     """
-    
-    """ Initialisation des matrices pour les moindres carrées """
-    nb_data = temperature.shape[0]
-    
+    Moindres carrés
+    """
     # X : vecteur des paramètres A, omega, phi, constante initialisé à 0
     X = np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)
-    #X = np.array([[1,1,1,1]]).reshape(4,1)
+
     # Données
     l = temperature
+    nb_data = np.size(l)
+    print(nb_data)
     
     # Matrice de poids, identité par défaut
     Ql = np.eye(nb_data)
@@ -85,12 +65,11 @@ if __name__=="__main__":
         Qlchap = Ql-Qvchap
         
         sigma0_2 = np.dot(np.dot(vchap.T,P),vchap)/(nb_data - 4)
-        print(sigma0_2)
         
         X = Xchap
     
     """ Affichage des résultats des MC """
-    
+        
     plt.figure()
     plt.plot(tps,temperature, "o", label = "Observations")
     plt.plot(tps, mod(tps,X))
@@ -101,8 +80,8 @@ if __name__=="__main__":
     plt.xlabel("temps [annees]")
     plt.ylabel("temperature [°C]")
     plt.show()
-    
-    
+        
+        
     plt.figure()
     plt.title("Histogramme des résidus")
     # Afficher la courbe de la loi normale de moyenne 0 et d'écart type sigma0
@@ -110,7 +89,32 @@ if __name__=="__main__":
     #plt.plot(x,sc.stats.norm.pdf(x,0,np.sqrt(sigma0_2)))
     plt.hist(vchap)
     plt.show()
-#    sc.
+    
+if __name__=="__main__":
+    nb_annee = 10
+    # Date du début de l'étude, date_deb >=1853
+    date_deb = 1853   
+    temperature, tps = read("oxforddata.txt",date_deb,nb_annee)
+    
+    #param, b = sc.optimize.curve_fit(mod,[i for i in range (nb_annee*12)],data[96:nb_annee*12+96,2])
+    
+    plt.figure()
+    plt.plot(tps,temperature)
+    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+    plt.title(titre)
+    plt.xlabel("temps [annees]")
+    plt.ylabel("temperature [°C]")
+    plt.show()
+    
+    """ 
+    Le modèle testé est A*cos(omega*tps + phi) + cste 
+    Il y a donc 4 paramètres.    
+    """
+    
+    """ Initialisation des matrices pour les moindres carrées """
+    nb_data = temperature.shape[0]
+    
+    MC(temperature,tps)
     """
     Les MC sont fait et il semble fonctionner cependant seulement quand on donne
     des valeur initiales pas trop éloignées de la véritées.
@@ -119,8 +123,7 @@ if __name__=="__main__":
 
     Rajouter matrice de variance co-variance!!!
     
-    """
-    
+    """ 
         
     """ Faire élimination des points faux en mode automatique """
     
@@ -143,24 +146,49 @@ if __name__=="__main__":
     Objectif: Ajusteement robuste d'un modèle à un jeu de données S contenant des points faux.
     """
     
-    # n nb minial de données pour estimer le modèle: selon le théorème de Shanon
+    
     # La représentation discrète d'un signal exige des échantillons régulièrement espacés à une fréquence d'échantillonnage supérieure au double de la fréquence maximale présente dans ce signal.
     # Frequence = 2*pi/T
     # T = 12 mois
     # Frequence  =  2*pi/12 = pi/6
-    # Th de Shanon Freq_echantillonage > 2*pi/6 = pi/3
+    # Th de Shanon Freq_echantillonage > 2*pi/6 = pi/3 
+    # Ce qui implique un point tous les 6 mois
     
-    n = 4
+    nb_mois = nb_data # Une donnée par mois!
+    # n nb minial de données pour estimer le modèle: selon le théorème de Shanon
+    n = nb_mois//6
+    jd_temperature = np.zeros((n,1))
+    jd_tps = np.zeros((n,1))
     
     # Tirage des valeurs initiales
-    rg_jeu_donnee = np.random.randint(nb_data, size=(n,1))
-    
-    jeu_donnee = np.zeros((n,1))
+    tmp = 0
     for i in range (n):
-        jeu_donnee_temperature[i,0] = temperature[rg_jeu_donnee[i,0]]
-        jeu_donnee_tps[i,0] = tps[rg_jeu_donnee[i,0]]
-    print(jeu_donnee_tps)
+        aleat = np.random.randint(6)
+        jd_temperature[i,0] = temperature[tmp+aleat]
+        jd_tps[i,0] = tps[tmp+aleat]
+        tmp += 6
     
+    # Graphe des points aléatoires choisi
+    plt.figure()
+    plt.plot(jd_tps,jd_temperature, "o", label = "Observations sélectionnées au tirage aléatoire")
+    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+    plt.title(titre)
+    plt.xlabel("temps [annees]")
+    plt.ylabel("temperature [°C]")
+    plt.show()
+    
+    MC(jd_temperature,jd_tps.reshape(n,0))
+    
+    
+
+#    rg_jeu_donnee = np.random.randint(nb_data, size=(n,1))
+#    
+#    jeu_donnee = np.zeros((n,1))
+#    for i in range (n):
+#        jeu_donnee_temperature[i,0] = temperature[rg_jeu_donnee[i,0]]
+#        jeu_donnee_tps[i,0] = tps[rg_jeu_donnee[i,0]]
+#    print(jeu_donnee_tps)
+#    
     
 
 

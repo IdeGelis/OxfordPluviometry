@@ -14,5 +14,5 @@ def read(fname, date_deb, nb_annee):
     temperature = temperature.reshape(12*nb_annee,1)
     #On récupère aussi la date correspondant avec des années décimales: 1900+2/12 = mars 19000
     tps = data[id_deb:id_deb + 12*nb_annee,0] + (data[id_deb:id_deb + 12*nb_annee,1]-1)/12
-    #tps = tps.reshape(12*nb_annee,1)
+    tps = tps.reshape(12*nb_annee,1)
     return temperature, tps
