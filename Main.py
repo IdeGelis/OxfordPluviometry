@@ -22,7 +22,7 @@ def mod(tps, param):
 
     
 if __name__=="__main__":
-    nb_annee = 20
+    nb_annee = 10
     # Date du début de l'étude, date_deb >=1853
     date_deb = 1853   
     temperature, tps = read("oxforddata.txt",date_deb,nb_annee)
@@ -143,9 +143,23 @@ if __name__=="__main__":
     Objectif: Ajusteement robuste d'un modèle à un jeu de données S contenant des points faux.
     """
     
-    # n nb minial de données pour estimer le modèle
+    # n nb minial de données pour estimer le modèle: selon le théorème de Shanon
+    # La représentation discrète d'un signal exige des échantillons régulièrement espacés à une fréquence d'échantillonnage supérieure au double de la fréquence maximale présente dans ce signal.
+    # Frequence = 2*pi/T
+    # T = 12 mois
+    # Frequence  =  2*pi/12 = pi/6
+    # Th de Shanon Freq_echantillonage > 2*pi/6 = pi/3
+    
     n = 4
     
+    # Tirage des valeurs initiales
+    rg_jeu_donnee = np.random.randint(nb_data, size=(n,1))
+    
+    jeu_donnee = np.zeros((n,1))
+    for i in range (n):
+        jeu_donnee_temperature[i,0] = temperature[rg_jeu_donnee[i,0]]
+        jeu_donnee_tps[i,0] = tps[rg_jeu_donnee[i,0]]
+    print(jeu_donnee_tps)
     
     
 
