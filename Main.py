@@ -41,9 +41,9 @@ def MC(temperature,tps):
     for k in range(10):
         # Matrice A jacobienne du modèle linéarisé
         A = np.ones((nb_data,4))
-        A[:,0] = np.cos(X[1,0]*tps + X[2,0])
-        A[:,1] = -X[0,0]*tps*np.sin(X[1,0]*tps + X[2,0])
-        A[:,2] = -X[0,0]*np.sin(X[1,0]*tps + X[2,0])
+        A[:,0] = np.cos(X[1,0]*tps[:,0] + X[2,0])
+        A[:,1] = -X[0,0]*tps[:,0]*np.sin(X[1,0]*tps[:,0] + X[2,0])
+        A[:,2] = -X[0,0]*np.sin(X[1,0]*tps[:,0] + X[2,0])
         
         B = l - mod(tps,X).reshape((nb_data,1))
         
@@ -90,6 +90,10 @@ def MC(temperature,tps):
     plt.hist(vchap)
     plt.show()
     
+    print ('Sigma0_2 :', sigma0_2)
+    
+    return (X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap)
+    
 if __name__=="__main__":
     nb_annee = 10
     # Date du début de l'étude, date_deb >=1853
@@ -114,7 +118,7 @@ if __name__=="__main__":
     """ Initialisation des matrices pour les moindres carrées """
     nb_data = temperature.shape[0]
     
-    MC(temperature,tps)
+    X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap = MC(temperature,tps)
     """
     Les MC sont fait et il semble fonctionner cependant seulement quand on donne
     des valeur initiales pas trop éloignées de la véritées.
@@ -146,7 +150,9 @@ if __name__=="__main__":
     Objectif: Ajusteement robuste d'un modèle à un jeu de données S contenant des points faux.
     """
     
-    
+    t = 2
+    T = 3*nb_data/4
+    K = 10
     # La représentation discrète d'un signal exige des échantillons régulièrement espacés à une fréquence d'échantillonnage supérieure au double de la fréquence maximale présente dans ce signal.
     # Frequence = 2*pi/T
     # T = 12 mois
@@ -160,36 +166,41 @@ if __name__=="__main__":
     jd_temperature = np.zeros((n,1))
     jd_tps = np.zeros((n,1))
     
-    # Tirage des valeurs initiales
-    tmp = 0
-    for i in range (n):
-        aleat = np.random.randint(6)
-        jd_temperature[i,0] = temperature[tmp+aleat]
-        jd_tps[i,0] = tps[tmp+aleat]
-        tmp += 6
     
-    # Graphe des points aléatoires choisi
-    plt.figure()
-    plt.plot(jd_tps,jd_temperature, "o", label = "Observations sélectionnées au tirage aléatoire")
-    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
-    plt.title(titre)
-    plt.xlabel("temps [annees]")
-    plt.ylabel("temperature [°C]")
-    plt.show()
+    ite = 0
+    ens_pts_temperature = []
+    ens_pts_tps = []
     
-    MC(jd_temperature,jd_tps.reshape(n,0))
-    
-    
-
-#    rg_jeu_donnee = np.random.randint(nb_data, size=(n,1))
-#    
-#    jeu_donnee = np.zeros((n,1))
-#    for i in range (n):
-#        jeu_donnee_temperature[i,0] = temperature[rg_jeu_donnee[i,0]]
-#        jeu_donnee_tps[i,0] = tps[rg_jeu_donnee[i,0]]
-#    print(jeu_donnee_tps)
-#    
-    
+    while ite < K : 
+        # Tirage des valeurs initiales
+        tmp = 0
+        for i in range (n):
+            aleat = np.random.randint(6)
+            jd_temperature[i,0] = temperature[tmp+aleat]
+            jd_tps[i,0] = tps[tmp+aleat]
+            tmp += 6
+        
+        # Graphe des points aléatoires choisi
+        plt.figure()
+        plt.plot(jd_tps,jd_temperature, "o", label = "Observations sélectionnées au tirage aléatoire")
+        titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+        plt.title(titre)
+        plt.xlabel("temps [annees]")
+        plt.ylabel("temperature [°C]")
+        plt.show()
+        
+        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap = MC(jd_temperature,jd_tps)
+        
+        # Selection des points qui collent au modèle
+        for i in range (nb_data):
+            if np.abs(mod(tps[i,0],X) - temperature[i,0]) < t:
+               ens_pts_temperature.append(temperature[i,0])
+               ens_pts_tps.append(tps[i,0])
+        
+        
+        ite+=1
+                
+        
 
 
     
