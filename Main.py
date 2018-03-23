@@ -22,7 +22,7 @@ def mod(tps, param):
 
     
 if __name__=="__main__":
-    nb_annee = 50
+    nb_annee = 20
     # Date du début de l'étude, date_deb >=1853
     date_deb = 1853   
     temperature, tps = read("oxforddata.txt",date_deb,nb_annee)
@@ -37,7 +37,10 @@ if __name__=="__main__":
     plt.ylabel("temperature [°C]")
     plt.show()
     
-    """ Le modèle testé est A*cos(omega*tps + phi) + cste """
+    """ 
+    Le modèle testé est A*cos(omega*tps + phi) + cste 
+    Il y a donc 4 paramètres.    
+    """
     
     """ Initialisation des matrices pour les moindres carrées """
     nb_data = temperature.shape[0]
@@ -113,6 +116,9 @@ if __name__=="__main__":
     des valeur initiales pas trop éloignées de la véritées.
     Il faut maintenant faire les graphes que David voulait pour une estimation par MC la plus complète possible.
     Par contre sigma0_2 semble se stabiliser très vite mais proche de 2.6 et non de 1...???
+
+    Rajouter matrice de variance co-variance!!!
+    
     """
     
         
@@ -129,6 +135,19 @@ if __name__=="__main__":
         si ecart <= ... : conservation
     Puis vérification du modèle.
     """
+    
+    
+    
+    """ RANSAC """
+    """
+    Objectif: Ajusteement robuste d'un modèle à un jeu de données S contenant des points faux.
+    """
+    
+    # n nb minial de données pour estimer le modèle
+    n = 4
+    
+    
+    
 
 
     
