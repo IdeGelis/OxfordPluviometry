@@ -165,15 +165,20 @@ if __name__=="__main__":
     n = nb_mois//6
     jd_temperature = np.zeros((n,1))
     jd_tps = np.zeros((n,1))
+        
+    ite = 0    
     
+    meilleur_ens_pts_temperature = []
+    meilleur_ens_pts_tps = []
     
-    ite = 0
-    ens_pts_temperature = []
-    ens_pts_tps = []
+    sz_max_ens = 0
     
     while ite < K : 
+        ens_pts_temperature = []
+        ens_pts_tps = []
+        
         # Tirage des valeurs initiales
-        tmp = 0
+        tmp = 0       
         for i in range (n):
             aleat = np.random.randint(6)
             jd_temperature[i,0] = temperature[tmp+aleat]
@@ -197,8 +202,32 @@ if __name__=="__main__":
                ens_pts_temperature.append(temperature[i,0])
                ens_pts_tps.append(tps[i,0])
         
-        
+        print(len(ens_pts_temperature))
+        if len(ens_pts_temperature)>=sz_max_ens:
+            meilleur_ens_pts_temperature = ens_pts_temperature
+            meilleur_ens_pts_tps = ens_pts_tps
+               
+        # Si suffisement de points collent au modèle, la boucle est arrêtée
+        if (len(ens_pts_temperature)>=T):         
+            sz_max_ens = len(ens_pts_temperature)
+            arr_ens_pts_temperature = np.reshape(ens_pts_temperature,(len(ens_pts_temperature),1))
+            arr_ens_pts_tps = np.reshape(ens_pts_tps,(len(ens_pts_tps),1))
+    
+            X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap = MC(arr_ens_pts_temperature, arr_ens_pts_tps)
+            
+            break
+        print(ite)
         ite+=1
+        
+    
+    # si on n'est pas sortie de la boucle du fait qu'on a trouvé un ensemble avec beaucoup de point
+    if ite >K:
+        arr_ens_pts_temperature = np.reshape(meilleur_ens_pts_temperature,(len(meilleur_ens_pts_temperature),1))
+        arr_ens_pts_tps = np.reshape(meilleur_ens_pts_tps,(len(meilleur_ens_pts_tps),1))
+        
+        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap = MC(arr_ens_pts_temperature, arr_ens_pts_tps)
+ 
+        
                 
         
 
