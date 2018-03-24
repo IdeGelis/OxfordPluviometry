@@ -93,74 +93,13 @@ def MC(temperature,tps):
     print ('Sigma0_2 :', sigma0_2)
     
     return (X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap)
-    
-if __name__=="__main__":
-    nb_annee = 10
-    # Date du début de l'étude, date_deb >=1853
-    date_deb = 1853   
-    temperature, tps = read("oxforddata.txt",date_deb,nb_annee)
-    
-    #param, b = sc.optimize.curve_fit(mod,[i for i in range (nb_annee*12)],data[96:nb_annee*12+96,2])
-    
-    plt.figure()
-    plt.plot(tps,temperature)
-    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
-    plt.title(titre)
-    plt.xlabel("temps [annees]")
-    plt.ylabel("temperature [°C]")
-    plt.show()
-    
-    """ 
-    Le modèle testé est A*cos(omega*tps + phi) + cste 
-    Il y a donc 4 paramètres.    
-    """
-    
-    """ Initialisation des matrices pour les moindres carrées """
-    nb_data = temperature.shape[0]
-    
-    X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap = MC(temperature,tps)
-    """
-    Les MC sont fait et il semble fonctionner cependant seulement quand on donne
-    des valeur initiales pas trop éloignées de la véritées.
-    Il faut maintenant faire les graphes que David voulait pour une estimation par MC la plus complète possible.
-    Par contre sigma0_2 semble se stabiliser très vite mais proche de 2.6 et non de 1...???
 
-    Rajouter matrice de variance co-variance!!!
-    
-    """ 
-        
-    """ Faire élimination des points faux en mode automatique """
-    
-    """
-    Poser un critere d'élimination : pex à 3*sigma pour trouver et éliminer les erreurs dans les données
-    ou
-    Estimer de manière itérative des droites de regression en eliminant a chaque iteration le 
-    residu le plus fort. Poser un critere d'arret=0.8 pex
-    
-    Idee : Calculer l'écart entre la valeur et le modele estime. Puis faire un predicat sur cette valeur :
-        si |ecart| > ... : elimination
-        si ecart <= ... : conservation
-    Puis vérification du modèle.
-    """
-    
-    
-    
+def ransac(t,T,K,temperature, tps):
     """ RANSAC """
     """
-    Objectif: Ajusteement robuste d'un modèle à un jeu de données S contenant des points faux.
+    Objectif: Ajustement robuste d'un modèle à un jeu de données S contenant des points faux.
     """
-    
-    t = 2
-    T = 3*nb_data/4
-    K = 10
-    # La représentation discrète d'un signal exige des échantillons régulièrement espacés à une fréquence d'échantillonnage supérieure au double de la fréquence maximale présente dans ce signal.
-    # Frequence = 2*pi/T
-    # T = 12 mois
-    # Frequence  =  2*pi/12 = pi/6
-    # Th de Shanon Freq_echantillonage > 2*pi/6 = pi/3 
-    # Ce qui implique un point tous les 6 mois
-    
-    nb_mois = nb_data # Une donnée par mois!
+    nb_mois = tps.shape[0] # Une donnée par mois!
     # n nb minial de données pour estimer le modèle: selon le théorème de Shanon
     n = nb_mois//6
     jd_temperature = np.zeros((n,1))
@@ -176,6 +115,13 @@ if __name__=="__main__":
     while ite < K : 
         ens_pts_temperature = []
         ens_pts_tps = []
+        
+        # La représentation discrète d'un signal exige des échantillons régulièrement espacés à une fréquence d'échantillonnage supérieure au double de la fréquence maximale présente dans ce signal.
+        # Frequence = 2*pi/T
+        # T = 12 mois
+        # Frequence  =  2*pi/12 = pi/6
+        # Th de Shanon Freq_echantillonage > 2*pi/6 = pi/3 
+        # Ce qui implique un point tous les 6 mois
         
         # Tirage des valeurs initiales
         tmp = 0       
@@ -210,8 +156,8 @@ if __name__=="__main__":
         # Si suffisement de points collent au modèle, la boucle est arrêtée
         if (len(ens_pts_temperature)>=T):         
             sz_max_ens = len(ens_pts_temperature)
-            arr_ens_pts_temperature = np.reshape(ens_pts_temperature,(len(ens_pts_temperature),1))
-            arr_ens_pts_tps = np.reshape(ens_pts_tps,(len(ens_pts_tps),1))
+            arr_ens_pts_temperature = np.reshape(meilleur_ens_pts_temperature,(len(meilleur_ens_pts_temperature),1))
+            arr_ens_pts_tps = np.reshape(meilleur_ens_pts_tps,(len(meilleur_ens_pts_tps),1))
     
             X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap = MC(arr_ens_pts_temperature, arr_ens_pts_tps)
             
@@ -226,6 +172,65 @@ if __name__=="__main__":
         arr_ens_pts_tps = np.reshape(meilleur_ens_pts_tps,(len(meilleur_ens_pts_tps),1))
         
         X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap = MC(arr_ens_pts_temperature, arr_ens_pts_tps)
+    
+    return (meilleur_ens_pts_temperature, meilleur_ens_pts_tps, X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap)
+if __name__=="__main__":
+    nb_annee = 10
+    # Date du début de l'étude, date_deb >=1853
+    date_deb = 1853   
+    temperature, tps = read("oxforddata.txt",date_deb,nb_annee)
+    
+    #param, b = sc.optimize.curve_fit(mod,[i for i in range (nb_annee*12)],data[96:nb_annee*12+96,2])
+    
+    plt.figure()
+    plt.plot(tps,temperature)
+    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+    plt.title(titre)
+    plt.xlabel("temps [annees]")
+    plt.ylabel("temperature [°C]")
+    plt.show()
+    
+    """ 
+    Le modèle testé est A*cos(omega*tps + phi) + cste 
+    Il y a donc 4 paramètres.    
+    """
+    
+    """ Initialisation des matrices pour les moindres carrées """
+    nb_data = temperature.shape[0]
+    
+    
+    # Moindres-carré
+    X_MC, sigma0_2_MC, Qlchap_MC, Qvchap_MC, Qxchap_MC, lchap_MC = MC(temperature,tps)
+    """
+    Rajouter matrice de variance co-variance!!!
+    
+    """ 
+        
+    """ Faire élimination des points faux en mode automatique """
+    
+    """
+    Poser un critere d'élimination : pex à 3*sigma pour trouver et éliminer les erreurs dans les données
+    ou
+    Estimer de manière itérative des droites de regression en eliminant a chaque iteration le 
+    residu le plus fort. Poser un critere d'arret=0.8 pex
+    
+    Idee : Calculer l'écart entre la valeur et le modele estime. Puis faire un predicat sur cette valeur :
+        si |ecart| > ... : elimination
+        si ecart <= ... : conservation
+    Puis vérification du modèle.
+    """
+    
+    
+    
+
+    
+    t = 2
+    T = 3*nb_data/4
+    K = 10
+    sel_temperature, sel_tps, X_ransac, sigma0_2_ransac, Qlchap_ransac, Qvchap_ransac, Qxchap_ransac, lchap_ransac = ransac(t, T, K, temperature, tps)
+
+    
+    
  
         
                 
