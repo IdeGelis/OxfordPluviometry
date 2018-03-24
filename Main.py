@@ -12,13 +12,18 @@ from Reader import read
 import scipy as sc
 #import lmfit
 
+
+
 def mod(tps, param):
     """
     Modèle A*cos(omega*tps + phi) + cste
     """ 
-    res = param[0,0]*np.cos(param[1,0]*tps + param[2,0])+ param[3,0]
+    res = param[0,0]*np.cos(param[1,0]*tps + param[2,0]) + param[3,0]
     return res
-    
+
+
+
+
 def MC(temperature,tps):
     """
     Moindres carrés
@@ -29,13 +34,12 @@ def MC(temperature,tps):
     # Données
     l = temperature
     nb_data = np.size(l)
-    print(nb_data)
     
-    # Matrice de poids, identité par défaut
+    # Matrice de poids : identité par défaut
     Ql = np.eye(nb_data)
-    P = np.eye(nb_data)
+    P = np.linalg.inv(Ql)
     
-    """ Moindres carrées """
+    #P = ptsFaux(mod(tps,X),l,P)
     
     # Itérations 
     for k in range(10):
@@ -52,24 +56,25 @@ def MC(temperature,tps):
         K = np.dot(np.dot(A.T,P),B)
         
         # dXchap = inv(N)*K
-        dXchap = np.dot(np.linalg.inv(N), K)
+        dXchap = np.dot(np.linalg.inv(N),K)
         
-        Xchap = X+dXchap
+        Xchap = X + dXchap
 
         vchap = B - np.dot(A,dXchap)
-        lchap = l-vchap
+        lchap = l - vchap
         
         # Matrice de variance covariance
         Qxchap = np.linalg.inv(np.dot(np.dot(np.transpose(A),P),A))
         Qvchap = Ql - np.dot(np.dot(A,Qxchap),A.T)
-        Qlchap = Ql-Qvchap
+        Qlchap = Ql - Qvchap
         
         sigma0_2 = np.dot(np.dot(vchap.T,P),vchap)/(nb_data - 4)
         
         X = Xchap
+        P = PtsFaux2(P,vchap)
     
     """ Affichage des résultats des MC """
-        
+
     plt.figure()
     plt.plot(tps,temperature, "o", label = "Observations")
     plt.plot(tps, mod(tps,X))
@@ -79,101 +84,142 @@ def MC(temperature,tps):
     plt.title(titre)
     plt.xlabel("temps [annees]")
     plt.ylabel("temperature [°C]")
+    plt.legend()
     plt.show()
         
         
-    plt.figure()
-    plt.title("Histogramme des résidus")
-    # Afficher la courbe de la loi normale de moyenne 0 et d'écart type sigma0
-    #x = np.linspace(0, 6*np.sqrt(sigma0_2), 100)
-    #plt.plot(x,sc.stats.norm.pdf(x,0,np.sqrt(sigma0_2)))
-    plt.hist(vchap)
-    plt.show()
+#    plt.figure()
+#    plt.title("Histogramme des résidus")
+#    # Afficher la courbe de la loi normale de moyenne 0 et d'écart type sigma0
+#    #x = np.linspace(0, 6*np.sqrt(sigma0_2), 100)
+#    #plt.plot(x,sc.stats.norm.pdf(x,0,np.sqrt(sigma0_2)))
+#    plt.hist(vchap)
+#    plt.show()
     
-    print ('Sigma0_2 :', sigma0_2)
+    print ('Sigma0_2 :', sigma0_2[0][0])
     
     return (X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap)
 
-def ransac(t,T,K,temperature, tps):
-    """ RANSAC """
+
+
+def ptsFaux1(modele,observations,poids):
+    """ Elimination des points faux en mode automatique """
+    
     """
-    Objectif: Ajustement robuste d'un modèle à un jeu de données S contenant des points faux.
+    Poser un critere d'élimination : pex à 3*sigma pour trouver et éliminer les erreurs dans les données
+    ou
+    Estimer de manière itérative des droites de regression en eliminant a chaque iteration le 
+    residu le plus fort. Poser un critere d'arret=0.8 pex
+    
+    Idee : Calculer l'écart entre la valeur et le modele estime. Puis faire un predicat sur cette valeur :
+        si |ecart| > ... : elimination
+        si ecart <= ... : conservation
+    Puis vérification du modèle.
     """
-    nb_mois = tps.shape[0] # Une donnée par mois!
-    # n nb minial de données pour estimer le modèle: selon le théorème de Shanon
-    n = nb_mois//6
-    jd_temperature = np.zeros((n,1))
-    jd_tps = np.zeros((n,1))
-        
-    ite = 0    
-    
-    meilleur_ens_pts_temperature = []
-    meilleur_ens_pts_tps = []
-    
-    sz_max_ens = 0
-    
-    while ite < K : 
-        ens_pts_temperature = []
-        ens_pts_tps = []
-        
-        # La représentation discrète d'un signal exige des échantillons régulièrement espacés à une fréquence d'échantillonnage supérieure au double de la fréquence maximale présente dans ce signal.
-        # Frequence = 2*pi/T
-        # T = 12 mois
-        # Frequence  =  2*pi/12 = pi/6
-        # Th de Shanon Freq_echantillonage > 2*pi/6 = pi/3 
-        # Ce qui implique un point tous les 6 mois
-        
-        # Tirage des valeurs initiales
-        tmp = 0       
-        for i in range (n):
-            aleat = np.random.randint(6)
-            jd_temperature[i,0] = temperature[tmp+aleat]
-            jd_tps[i,0] = tps[tmp+aleat]
-            tmp += 6
-        
-        # Graphe des points aléatoires choisi
-        plt.figure()
-        plt.plot(jd_tps,jd_temperature, "o", label = "Observations sélectionnées au tirage aléatoire")
-        titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
-        plt.title(titre)
-        plt.xlabel("temps [annees]")
-        plt.ylabel("temperature [°C]")
-        plt.show()
-        
-        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap = MC(jd_temperature,jd_tps)
-        
-        # Selection des points qui collent au modèle
-        for i in range (nb_data):
-            if np.abs(mod(tps[i,0],X) - temperature[i,0]) < t:
-               ens_pts_temperature.append(temperature[i,0])
-               ens_pts_tps.append(tps[i,0])
-        
-        print(len(ens_pts_temperature))
-        if len(ens_pts_temperature)>=sz_max_ens:
-            meilleur_ens_pts_temperature = ens_pts_temperature
-            meilleur_ens_pts_tps = ens_pts_tps
-               
-        # Si suffisement de points collent au modèle, la boucle est arrêtée
-        if (len(ens_pts_temperature)>=T):         
-            sz_max_ens = len(ens_pts_temperature)
-            arr_ens_pts_temperature = np.reshape(meilleur_ens_pts_temperature,(len(meilleur_ens_pts_temperature),1))
-            arr_ens_pts_tps = np.reshape(meilleur_ens_pts_tps,(len(meilleur_ens_pts_tps),1))
-    
-            X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap = MC(arr_ens_pts_temperature, arr_ens_pts_tps)
-            
-            break
-        print(ite)
-        ite+=1
-        
-    
-    # si on n'est pas sortie de la boucle du fait qu'on a trouvé un ensemble avec beaucoup de point
-    if ite >K:
-        arr_ens_pts_temperature = np.reshape(meilleur_ens_pts_temperature,(len(meilleur_ens_pts_temperature),1))
-        arr_ens_pts_tps = np.reshape(meilleur_ens_pts_tps,(len(meilleur_ens_pts_tps),1))
-        
-        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap = MC(arr_ens_pts_temperature, arr_ens_pts_tps)
-    
-    return (meilleur_ens_pts_temperature, meilleur_ens_pts_tps, X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap)
+    for n in range(np.size(observations)):
+        if abs(modele[n]-observations[n])>2.5:
+            poids[n][n] = 0.4
+    return poids
+
+def PtsFaux2(poids,residus):
+    """
+    Modification du poids de la valeur ayant le résidu le plus élevé
+    """
+    ir = np.argmax(residus)
+    print(ir,max(residus))
+    poids[ir][ir] = 0.0
+    return poids
+
+
+
+#def ransac(t,T,K,temperature, tps):
+#    """ RANSAC """
+#    """
+#    Objectif: Ajustement robuste d'un modèle à un jeu de données S contenant des points faux.
+#    """
+#    nb_mois = tps.shape[0] # Une donnée par mois!
+#    # n nb minial de données pour estimer le modèle: selon le théorème de Shanon
+#    n = nb_mois//6
+#    jd_temperature = np.zeros((n,1))
+#    jd_tps = np.zeros((n,1))
+#        
+#    ite = 0    
+#    
+#    meilleur_ens_pts_temperature = []
+#    meilleur_ens_pts_tps = []
+#    
+#    sz_max_ens = 0
+#    
+#    while ite < K : 
+#        ens_pts_temperature = []
+#        ens_pts_tps = []
+#        
+#        # La représentation discrète d'un signal exige des échantillons régulièrement espacés à une fréquence d'échantillonnage supérieure au double de la fréquence maximale présente dans ce signal.
+#        # Frequence = 2*pi/T
+#        # T = 12 mois
+#        # Frequence  =  2*pi/12 = pi/6
+#        # Th de Shanon Freq_echantillonage > 2*pi/6 = pi/3 
+#        # Ce qui implique un point tous les 6 mois
+#        
+#        # Tirage des valeurs initiales
+#        tmp = 0       
+#        for i in range (n):
+#            aleat = np.random.randint(6)
+#            jd_temperature[i,0] = temperature[tmp+aleat]
+#            jd_tps[i,0] = tps[tmp+aleat]
+#            tmp += 6
+#        
+#        # Graphe des points aléatoires choisi
+#        plt.figure()
+#        plt.plot(jd_tps,jd_temperature, "o", label = "Observations sélectionnées au tirage aléatoire")
+#        titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+#        plt.title(titre)
+#        plt.xlabel("temps [annees]")
+#        plt.ylabel("temperature [°C]")
+#        plt.show()
+#        
+#        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap = MC(jd_temperature,jd_tps)
+#        
+#        # Selection des points qui collent au modèle
+#        for i in range (nb_data):
+#            if np.abs(mod(tps[i,0],X) - temperature[i,0]) < t:
+#               ens_pts_temperature.append(temperature[i,0])
+#               ens_pts_tps.append(tps[i,0])
+#        
+#        print(len(ens_pts_temperature))
+#        if len(ens_pts_temperature)>=sz_max_ens:
+#            meilleur_ens_pts_temperature = ens_pts_temperature
+#            meilleur_ens_pts_tps = ens_pts_tps
+#               
+#        # Si suffisement de points collent au modèle, la boucle est arrêtée
+#        if (len(ens_pts_temperature)>=T):         
+#            sz_max_ens = len(ens_pts_temperature)
+#            arr_ens_pts_temperature = np.reshape(meilleur_ens_pts_temperature,(len(meilleur_ens_pts_temperature),1))
+#            arr_ens_pts_tps = np.reshape(meilleur_ens_pts_tps,(len(meilleur_ens_pts_tps),1))
+#    
+#            X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap = MC(arr_ens_pts_temperature, arr_ens_pts_tps)
+#            
+#            break
+#        print(ite)
+#        ite+=1
+#        
+#    
+#    # si on n'est pas sortie de la boucle du fait qu'on a trouvé un ensemble avec beaucoup de point
+#    if ite >K:
+#        arr_ens_pts_temperature = np.reshape(meilleur_ens_pts_temperature,(len(meilleur_ens_pts_temperature),1))
+#        arr_ens_pts_tps = np.reshape(meilleur_ens_pts_tps,(len(meilleur_ens_pts_tps),1))
+#        
+#        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap = MC(arr_ens_pts_temperature, arr_ens_pts_tps)
+#    
+#    return (meilleur_ens_pts_temperature, meilleur_ens_pts_tps, X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap)
+
+
+
+
+
+
+
+
 if __name__=="__main__":
     nb_annee = 10
     # Date du début de l'étude, date_deb >=1853
@@ -224,10 +270,10 @@ if __name__=="__main__":
     
 
     
-    t = 2
-    T = 3*nb_data/4
-    K = 10
-    sel_temperature, sel_tps, X_ransac, sigma0_2_ransac, Qlchap_ransac, Qvchap_ransac, Qxchap_ransac, lchap_ransac = ransac(t, T, K, temperature, tps)
+#    t = 2
+#    T = 3*nb_data/4
+#    K = 10
+#    sel_temperature, sel_tps, X_ransac, sigma0_2_ransac, Qlchap_ransac, Qvchap_ransac, Qxchap_ransac, lchap_ransac = ransac(t, T, K, temperature, tps)
 
     
     
