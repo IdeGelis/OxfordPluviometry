@@ -40,7 +40,7 @@ def MC(temperature,tps):
     Ql = np.eye(nb_data)
     P = np.linalg.inv(Ql)
     
-    #P = ptsFaux(mod(tps,X),l,P)
+    #P = ptsFaux1(mod(tps,X),l,P)
     
     # Itérations 
     for k in range(10):
@@ -83,18 +83,9 @@ def MC(temperature,tps):
 
 
 def ptsFaux1(modele,observations,poids):
-    """ Elimination des points faux en mode automatique """
-    
-    """
-    Poser un critere d'élimination : pex à 3*sigma pour trouver et éliminer les erreurs dans les données
-    ou
-    Estimer de manière itérative des droites de regression en eliminant a chaque iteration le 
-    residu le plus fort. Poser un critere d'arret=0.8 pex
-    
-    Idee : Calculer l'écart entre la valeur et le modele estime. Puis faire un predicat sur cette valeur :
-        si |ecart| > ... : elimination
-        si ecart <= ... : conservation
-    Puis vérification du modèle.
+    """ 
+    Elimination des points faux
+    Modification du poids des valeurs ayant un écart trop élevé par rapport au modèle
     """
     for n in range(np.size(observations)):
         if abs(modele[n]-observations[n])>2.5:
@@ -103,11 +94,11 @@ def ptsFaux1(modele,observations,poids):
 
 def PtsFaux2(poids,residus):
     """
+    Elimination des points faux
     Modification du poids de la valeur ayant le résidu le plus élevé
     """
-    ir = np.argmax(residus)
-    print(ir,max(residus))
-    poids[ir][ir] = 0.0
+    ir1 = np.argmax(residus)
+    poids[ir1][ir1] = 9.6
     return poids
 
 
