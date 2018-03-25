@@ -29,8 +29,8 @@ def MC(temperature,tps):
     Moindres carrés
     """
     
-    # X : vecteur des paramètres A, omega, phi, constante initialisé à 0
-    X = np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)
+    # X : vecteur des paramètres A, omega, phi, constante initialisé 
+    X = np.array([[15,(2*np.pi),0,14]]).reshape(4,1)
 
     # Données
     l = temperature
@@ -152,19 +152,19 @@ def ransac(t,T,K,temperature, tps):
             tmp += 6
         
         # Graphe des points aléatoires choisi
-        plt.figure()
-        plt.plot(jd_tps,jd_temperature, "o", label = "Observations sélectionnées au tirage aléatoire")
-        titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
-        plt.title(titre)
-        plt.xlabel("temps [annees]")
-        plt.ylabel("temperature [°C]")
-        plt.show()
+#        plt.figure()
+#        plt.plot(jd_tps,jd_temperature, "o", label = "Observations sélectionnées au tirage aléatoire")
+#        titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+#        plt.title(titre)
+#        plt.xlabel("temps [annees]")
+#        plt.ylabel("temperature [°C]")
+#        plt.show()
         
         X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap = MC(jd_temperature,jd_tps)
         
         # Selection des points qui collent au modèle
         for i in range (nb_data):
-            print(tps[i,0], ' : ', np.abs(mod(tps[i,0],X) - temperature[i,0]))
+#            print(tps[i,0], ' : ', np.abs(mod(tps[i,0],X) - temperature[i,0]))
             if np.abs(mod(tps[i,0],X) - temperature[i,0]) < t:
                ens_pts_temperature.append(temperature[i,0])
                ens_pts_tps.append(tps[i,0])
@@ -207,7 +207,7 @@ def ransac(t,T,K,temperature, tps):
 if __name__=="__main__":
     nb_annee = 5
     # Date du début de l'étude, date_deb >=1853
-    date_deb = 1853   
+    date_deb = 1854   
     temperature, tps = read("oxforddata.txt",date_deb,nb_annee)
     
     #param, b = sc.optimize.curve_fit(mod,[i for i in range (nb_annee*12)],data[96:nb_annee*12+96,2])
@@ -273,6 +273,7 @@ if __name__=="__main__":
     
     """
     Rajouter matrice de variance co-variance!!!
+    Et le test du CHI-2
     
     """ 
         
@@ -294,9 +295,9 @@ if __name__=="__main__":
     
 
     
-    t = 1
-    T = 9*nb_data/10
-    K = 5
+    t = 3
+    T = 10*nb_data/10
+    K = 100
     sel_temperature, sel_tps, X_ransac, sigma0_2_ransac, Qlchap_ransac, Qvchap_ransac, Qxchap_ransac, lchap_ransac, vchap_ransac = ransac(t, T, K, temperature, tps)
 
     
@@ -320,6 +321,8 @@ if __name__=="__main__":
     plt.hist(vchap_ransac)
     plt.show()
  
+    print(len(sel_tps))
+    print(len(sel_tps)*100/1800, ' %')
         
                 
         
