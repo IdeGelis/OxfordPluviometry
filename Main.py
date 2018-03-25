@@ -77,7 +77,7 @@ def MC(temperature,tps,mode):
     
 
     
-    print ('Sigma0_2 :', sigma0_2[0][0])
+    #print ('Sigma0_2 :', sigma0_2[0][0])
     
     return (X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap)
 
@@ -102,7 +102,12 @@ def PtsFaux2(poids,residus):
     poids[ir1][ir1] = 0.0
     return poids
 
-
+def testSeuil(residus, seuil):
+    cpt = 0
+    for i in range (residus.shape[0]):
+        if residus[i,0] <= seuil : 
+            cpt +=1
+    return cpt*100/residus.shape[0]
 
 def ransac(t,T,K,temperature, tps):
     """ RANSAC """
@@ -124,15 +129,14 @@ def ransac(t,T,K,temperature, tps):
     sz_max_ens = 0
     
     while ite < K :
-        print("Iteration n° ",ite)
+        #print("Iteration n° ",ite)
         ens_pts_temperature = []
         ens_pts_tps = []
         
         # La représentation discrète d'un signal exige des échantillons régulièrement espacés à une fréquence d'échantillonnage supérieure au double de la fréquence maximale présente dans ce signal.
-        # Frequence = 2*pi/T
+        # Frequence = 1/T
         # T = 12 mois
-        # Frequence  =  2*pi/12 = pi/6
-        # Th de Shanon Freq_echantillonage > 2*pi/6 = pi/3 
+        # Th de Shanon Freq_echantillonage > 2/12 = 1/6
         # Ce qui implique un point tous les 6 mois
         
         # Tirage des valeurs initiales
@@ -161,7 +165,7 @@ def ransac(t,T,K,temperature, tps):
                ens_pts_temperature.append(temperature[i,0])
                ens_pts_tps.append(tps[i,0])
         
-        print("Taille de l'ensemble de points collant au modèle :", len(ens_pts_temperature))
+        #print("Taille de l'ensemble de points collant au modèle :", len(ens_pts_temperature))
         if len(ens_pts_temperature)>=sz_max_ens:           
             meilleur_ens_pts_temperature = ens_pts_temperature
             meilleur_ens_pts_tps = ens_pts_tps
@@ -197,9 +201,9 @@ def ransac(t,T,K,temperature, tps):
 
 
 if __name__=="__main__":
-    nb_annee = 5
+    nb_annee = 150
     # Date du début de l'étude, date_deb >=1853
-    date_deb = 1854   
+    date_deb = 1853   
     temperature, tps = read("oxforddata.txt",date_deb,nb_annee)
     
     #param, b = sc.optimize.curve_fit(mod,[i for i in range (nb_annee*12)],data[96:nb_annee*12+96,2])
@@ -222,13 +226,53 @@ if __name__=="__main__":
     
     print("---------------------------MOINDRES-CARRES-----------------------------------")
     # Moindres-carré
-    X_MC, sigma0_2_MC, Qlchap_MC, Qvchap_MC, Qxchap_MC, lchap_MC, vchap_MC = MC(temperature,tps,mode="elim")
+    X_MC, sigma0_2_MC, Qlchap_MC, Qvchap_MC, Qxchap_MC, lchap_MC, vchap_MC = MC(temperature,tps,mode="notElim")
+    
+    """ Affichage des résultats des MC """
+
+    plt.figure()
+    plt.plot(tps,temperature, label = "Observations")
+    plt.plot(tps, mod(tps,X_MC), label = "Modèle issus des MC")
+    #Test pour les params initiaux
+    #•plt.plot(tps, mod(tps,np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)))
+    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+    plt.title(titre)
+    plt.xlabel("temps [annees]")
+    plt.ylabel("temperature [°C]")
+    plt.legend()
+    plt.show()
+        
+    plt.figure()
+    plt.plot(tps[50:50+20*12,:],temperature[50:50+20*12,:], label = "Observations")
+    plt.plot(tps[50:50+20*12,:], mod(tps[50:50+20*12,:],X_MC), label = "Modèle issus des MC")
+    #Test pour les params initiaux
+    #•plt.plot(tps, mod(tps,np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)))
+    titre = "Zoom sur les precipitations à Oxford de " + str(date_deb+50) + " à " + str(date_deb+70)
+    plt.title(titre)
+    plt.xlabel("temps [annees]")
+    plt.ylabel("temperature [°C]")
+    plt.legend()
+    plt.show()
+    
+    
+    plt.figure()
+    plt.title("Histogramme des résidus")
+    # Afficher la courbe de la loi normale de moyenne 0 et d'écart type sigma0
+    #x = np.linspace(0, 6*np.sqrt(sigma0_2), 100)
+    #plt.plot(x,sc.stats.norm.pdf(x,0,np.sqrt(sigma0_2)))
+    plt.hist(vchap_MC)
+    plt.show()
+    print ('Sigma0_2 :', sigma0_2_MC[0][0])
+    
+    print("------------------MOINDRES-CARRES ELIMINATION PTS FAUX-----------------------")
+    # Moindres-carré
+    X_MC2, sigma0_2_MC2, Qlchap_MC2, Qvchap_MC2, Qxchap_MC2, lchap_MC2, vchap_MC2 = MC(temperature,tps,mode="elim")
     
     """ Affichage des résultats des MC """
 
     plt.figure()
     plt.plot(tps,temperature, "o", label = "Observations")
-    plt.plot(tps, mod(tps,X_MC))
+    plt.plot(tps, mod(tps,X_MC2))
     #Test pour les params initiaux
     #•plt.plot(tps, mod(tps,np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)))
     titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
@@ -244,24 +288,12 @@ if __name__=="__main__":
     # Afficher la courbe de la loi normale de moyenne 0 et d'écart type sigma0
     #x = np.linspace(0, 6*np.sqrt(sigma0_2), 100)
     #plt.plot(x,sc.stats.norm.pdf(x,0,np.sqrt(sigma0_2)))
-    plt.hist(vchap_MC)
+    plt.hist(vchap_MC2)
     plt.show()
+    print ('Sigma0_2 :', sigma0_2_MC2[0][0])
     
     
     
-#    fig = plt.figure()
-#    ax1 = fig.add_subplot(111)
-#    cmap = cm.get_cmap('jet', 30)
-#    cax = ax1.imshow(np.abs(Qxchap_MC), interpolation="nearest", cmap=cmap)
-#    ax1.grid(True)
-#    plt.title('Qxchap')
-#    labels=['A','omega','phi','cste']
-#    ax1.set_xticklabels(labels,fontsize=6)
-#    ax1.set_yticklabels(labels,fontsize=6)
-#    # Add colorbar, make sure to specify tick locations to match desired ticklabels
-#    fig.colorbar(cax, ticks=[0.2,.4,.6,.8,1])
-#    plt.show()
-
     
     """
     Rajouter matrice de variance co-variance!!!
@@ -287,34 +319,35 @@ if __name__=="__main__":
     
 
     
-#    t = 3
-#    T = 10*nb_data/10
-#    K = 100
-#    sel_temperature, sel_tps, X_ransac, sigma0_2_ransac, Qlchap_ransac, Qvchap_ransac, Qxchap_ransac, lchap_ransac, vchap_ransac = ransac(t, T, K, temperature, tps)
-#
-#    
-#    plt.figure()
-#    plt.plot(tps,temperature, "o", label = "Observations")
-#    plt.plot(sel_tps,sel_temperature, "o", label = "Observations sélectionnées")
-#    plt.plot(tps, mod(tps,X_ransac))
-#    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
-#    plt.title(titre)
-#    plt.xlabel("temps [annees]")
-#    plt.ylabel("temperature [°C]")
-#    plt.legend()
-#    plt.show()
-#        
-#        
-#    plt.figure()
-#    plt.title("Histogramme des résidus avec la méthode ransac")
-#    # Afficher la courbe de la loi normale de moyenne 0 et d'écart type sigma0
-#    #x = np.linspace(0, 6*np.sqrt(sigma0_2), 100)
-#    #plt.plot(x,sc.stats.norm.pdf(x,0,np.sqrt(sigma0_2)))
-#    plt.hist(vchap_ransac)
-#    plt.show()
-# 
-#    print(len(sel_tps))
-#    print(len(sel_tps)*100/1800, ' %')
+    t = 2 #Choisi nottament grace à testSeuil
+    T = 10*nb_data/10
+    K = 100
+    sel_temperature, sel_tps, X_ransac, sigma0_2_ransac, Qlchap_ransac, Qvchap_ransac, Qxchap_ransac, lchap_ransac, vchap_ransac = ransac(t, T, K, temperature, tps)
+
+    
+    plt.figure()
+    plt.plot(tps,temperature, "o", label = "Observations")
+    plt.plot(sel_tps,sel_temperature, "o", label = "Observations sélectionnées")
+    plt.plot(tps, mod(tps,X_ransac))
+    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+    plt.title(titre)
+    plt.xlabel("temps [annees]")
+    plt.ylabel("temperature [°C]")
+    plt.legend()
+    plt.show()
+        
+        
+    plt.figure()
+    plt.title("Histogramme des résidus avec la méthode ransac")
+    # Afficher la courbe de la loi normale de moyenne 0 et d'écart type sigma0
+    #x = np.linspace(0, 6*np.sqrt(sigma0_2), 100)
+    #plt.plot(x,sc.stats.norm.pdf(x,0,np.sqrt(sigma0_2)))
+    plt.hist(vchap_ransac)
+    plt.show()
+    print ('Sigma0_2 :', sigma0_2_ransac[0][0])
+ 
+    print(len(sel_tps))
+    print(len(sel_tps)*100/1800, '%')
         
                 
         
