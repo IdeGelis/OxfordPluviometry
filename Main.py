@@ -24,13 +24,13 @@ def mod(tps, param):
 
 
 
-def MC(temperature,tps):
+def MC(temperature,tps,mode):
     """
     Moindres carrés
     """
     
     # X : vecteur des paramètres A, omega, phi, constante initialisé 
-    X = np.array([[15,(2*np.pi),0,14]]).reshape(4,1)
+    X = np.array([[7.5,(2*np.pi),0,14]]).reshape(4,1)
 
     # Données
     l = temperature
@@ -40,10 +40,9 @@ def MC(temperature,tps):
     Ql = np.eye(nb_data)
     P = np.linalg.inv(Ql)
     
-    #P = ptsFaux1(mod(tps,X),l,P)
     
     # Itérations 
-    for k in range(10):
+    for k in range(50):
         # Matrice A jacobienne du modèle linéarisé
         A = np.ones((nb_data,4))
         A[:,0] = np.cos(X[1,0]*tps[:,0] + X[2,0])
@@ -72,7 +71,9 @@ def MC(temperature,tps):
         sigma0_2 = np.dot(np.dot(vchap.T,P),vchap)/(nb_data - 4)
         
         X = Xchap
-        #P = PtsFaux2(P,vchap)
+        
+        if mode == "elim" :
+            P = PtsFaux2(P,vchap)
     
 
     
@@ -98,7 +99,7 @@ def PtsFaux2(poids,residus):
     Modification du poids de la valeur ayant le résidu le plus élevé
     """
     ir1 = np.argmax(residus)
-    poids[ir1][ir1] = 9.6
+    poids[ir1][ir1] = 0.0
     return poids
 
 
@@ -151,7 +152,7 @@ def ransac(t,T,K,temperature, tps):
 #        plt.ylabel("temperature [°C]")
 #        plt.show()
         
-        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap = MC(jd_temperature,jd_tps)
+        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap = MC(jd_temperature,jd_tps,mode="notElim")
         
         # Selection des points qui collent au modèle
         for i in range (nb_data):
@@ -172,7 +173,7 @@ def ransac(t,T,K,temperature, tps):
             arr_ens_pts_temperature = np.reshape(meilleur_ens_pts_temperature,(len(meilleur_ens_pts_temperature),1))
             arr_ens_pts_tps = np.reshape(meilleur_ens_pts_tps,(len(meilleur_ens_pts_tps),1))
     
-            X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap = MC(arr_ens_pts_temperature, arr_ens_pts_tps)
+            X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap = MC(arr_ens_pts_temperature, arr_ens_pts_tps, mode="notElim")
             
             break
         
@@ -184,7 +185,7 @@ def ransac(t,T,K,temperature, tps):
         arr_ens_pts_temperature = np.reshape(meilleur_ens_pts_temperature,(len(meilleur_ens_pts_temperature),1))
         arr_ens_pts_tps = np.reshape(meilleur_ens_pts_tps,(len(meilleur_ens_pts_tps),1))
         
-        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap = MC(arr_ens_pts_temperature, arr_ens_pts_tps)
+        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap = MC(arr_ens_pts_temperature, arr_ens_pts_tps, mode="notElim")
     
     return (meilleur_ens_pts_temperature, meilleur_ens_pts_tps, X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap)
 
@@ -221,7 +222,7 @@ if __name__=="__main__":
     
     print("---------------------------MOINDRES-CARRES-----------------------------------")
     # Moindres-carré
-    X_MC, sigma0_2_MC, Qlchap_MC, Qvchap_MC, Qxchap_MC, lchap_MC, vchap_MC = MC(temperature,tps)
+    X_MC, sigma0_2_MC, Qlchap_MC, Qvchap_MC, Qxchap_MC, lchap_MC, vchap_MC = MC(temperature,tps,mode="elim")
     
     """ Affichage des résultats des MC """
 
@@ -286,34 +287,34 @@ if __name__=="__main__":
     
 
     
-    t = 3
-    T = 10*nb_data/10
-    K = 100
-    sel_temperature, sel_tps, X_ransac, sigma0_2_ransac, Qlchap_ransac, Qvchap_ransac, Qxchap_ransac, lchap_ransac, vchap_ransac = ransac(t, T, K, temperature, tps)
-
-    
-    plt.figure()
-    plt.plot(tps,temperature, "o", label = "Observations")
-    plt.plot(sel_tps,sel_temperature, "o", label = "Observations sélectionnées")
-    plt.plot(tps, mod(tps,X_ransac))
-    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
-    plt.title(titre)
-    plt.xlabel("temps [annees]")
-    plt.ylabel("temperature [°C]")
-    plt.legend()
-    plt.show()
-        
-        
-    plt.figure()
-    plt.title("Histogramme des résidus avec la méthode ransac")
-    # Afficher la courbe de la loi normale de moyenne 0 et d'écart type sigma0
-    #x = np.linspace(0, 6*np.sqrt(sigma0_2), 100)
-    #plt.plot(x,sc.stats.norm.pdf(x,0,np.sqrt(sigma0_2)))
-    plt.hist(vchap_ransac)
-    plt.show()
- 
-    print(len(sel_tps))
-    print(len(sel_tps)*100/1800, ' %')
+#    t = 3
+#    T = 10*nb_data/10
+#    K = 100
+#    sel_temperature, sel_tps, X_ransac, sigma0_2_ransac, Qlchap_ransac, Qvchap_ransac, Qxchap_ransac, lchap_ransac, vchap_ransac = ransac(t, T, K, temperature, tps)
+#
+#    
+#    plt.figure()
+#    plt.plot(tps,temperature, "o", label = "Observations")
+#    plt.plot(sel_tps,sel_temperature, "o", label = "Observations sélectionnées")
+#    plt.plot(tps, mod(tps,X_ransac))
+#    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+#    plt.title(titre)
+#    plt.xlabel("temps [annees]")
+#    plt.ylabel("temperature [°C]")
+#    plt.legend()
+#    plt.show()
+#        
+#        
+#    plt.figure()
+#    plt.title("Histogramme des résidus avec la méthode ransac")
+#    # Afficher la courbe de la loi normale de moyenne 0 et d'écart type sigma0
+#    #x = np.linspace(0, 6*np.sqrt(sigma0_2), 100)
+#    #plt.plot(x,sc.stats.norm.pdf(x,0,np.sqrt(sigma0_2)))
+#    plt.hist(vchap_ransac)
+#    plt.show()
+# 
+#    print(len(sel_tps))
+#    print(len(sel_tps)*100/1800, ' %')
         
                 
         
