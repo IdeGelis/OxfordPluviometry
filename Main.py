@@ -216,6 +216,22 @@ if __name__=="__main__":
     plt.ylabel("temperature [°C]")
     plt.show()
     
+	"""
+	NOTE DE DAVID!:
+	Il faut divisé les résidus par leur écarts type (donc racine de la diagonale de Qvchap)
+	Division avant le test d'elimination des points faux mais aussi pour tracer les histogrammes
+	
+	
+	residus divisé par leurs ecarts-types 99.9% entre -3 3
+	
+	RANSAC: regarder le pourcentage de points eliminer par la méthode des points faux pour eliminer un pourcentage correspondant par Ransac
+	Ajouter dans le rapport que c'est subjectif ce choix de paramètres
+	
+	
+	PEnser au Chi-2
+	
+	Penser au aux courbes des normales 
+	"""
     """ 
     Le modèle testé est A*cos(omega*tps + phi) + cste 
     Il y a donc 4 paramètres.    
