@@ -109,7 +109,13 @@ def testSeuil(residus, seuil):
     return cpt*100/residus.shape[0]
 
 
-
+def Gauss(x,mu,sigma):
+    """
+    Création d'une gaussienne (es fonctions pré'implémentées ne marchent pas...)
+    """
+    coeff = 1/(sigma*np.sqrt(2*np.pi))
+    gauss = 400+ coeff * np.exp(-1/2*((x-mu)/sigma)**2)
+    return gauss
 
 
 def ransac(t,T,K,temperature, tps):
@@ -236,6 +242,14 @@ if __name__=="__main__":
 	 Penser au aux courbes des normales 
     """
     
+    
+    """
+    Fait : résidus normalisés ; imprimer les histogrammes des résidus normalisés ; mode d'itération : arrêt quand sigma0² stagne
+    Reste à faire : courbe normale ; elimination pts faux MC ; residus divisé par leurs ecarts-types 99.9% entre -3 3 ; chi²
+    """
+    
+    
+    
     """ 
     Le modèle testé est A*cos(omega*tps + phi) + cste 
     Il y a donc 4 paramètres.    
@@ -274,11 +288,17 @@ if __name__=="__main__":
     plt.legend()
     plt.show()
     
+    plt.figure()
+    plt.title('fonction gaussienne')
+    x = np.linspace(0, 6*np.sqrt(sigma0_2_MC), 100)
+    y = Gauss(x,0,np.sqrt(sigma0_2_MC))
+    plt.plot(x,y)
+    plt.show()
     
     plt.figure()
     plt.title("Histogramme des résidus")
     # Afficher la courbe de la loi normale de moyenne 0 et d'écart type sigma0
-#    x = np.linspace(0, 6*np.sqrt(sigma0_2_MC), 100)
+
 #    plt.plot(x,sc.stats.norm.pdf(x,0,np.sqrt(sigma0_2_MC)))
     plt.hist(vchap_MC)
     plt.show()
