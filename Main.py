@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from Reader import read
 from matplotlib import cm as cm
 import scipy as sc
+from scipy.stats import chi2, norm
 #import lmfit
 
 
@@ -169,12 +170,11 @@ def ransac(t,T,K,temperature, tps):
         
         # Selection des points qui collent au modèle
         for i in range (nb_data):
-#            print(tps[i,0], ' : ', np.abs(mod(tps[i,0],X) - temperature[i,0]))
             if np.abs(mod(tps[i,0],X) - temperature[i,0]) < t:
                ens_pts_temperature.append(temperature[i,0])
                ens_pts_tps.append(tps[i,0])
         
-        #print("Taille de l'ensemble de points collant au modèle :", len(ens_pts_temperature))
+
         if len(ens_pts_temperature)>=sz_max_ens:           
             meilleur_ens_pts_temperature = ens_pts_temperature
             meilleur_ens_pts_tps = ens_pts_tps
@@ -297,9 +297,7 @@ if __name__=="__main__":
     
     plt.figure()
     plt.title("Histogramme des résidus")
-    # Afficher la courbe de la loi normale de moyenne 0 et d'écart type sigma0
-
-#    plt.plot(x,sc.stats.norm.pdf(x,0,np.sqrt(sigma0_2_MC)))
+    
     plt.hist(vchap_MC)
     plt.show()
     print ('Sigma0_2 :', sigma0_2_MC[0][0])
@@ -307,9 +305,41 @@ if __name__=="__main__":
     plt.figure()
     plt.title("Histogramme des résidus normalisés")
     plt.hist(vnorm_MC)
+    # Afficher la courbe de la loi normale de moyenne 0 et d'écart type sigma0
+    plt.plot(x,norm.pdf(x,0,np.sqrt(sigma0_2_MC)))
     plt.show()
     print ('Sigma0_2 :', sigma0_2_MC[0][0])
     
+    
+    """
+    TEST CHI-2
+    Le test du chi-deux permet, en comparant la valeur du facteur unitaire de variance
+    avec la valeur théorique, de qualifier le résultat de l'ajustement.
+    """
+    
+    # Détermination des bornes de l'intervalle
+    #dlib: degré de liberté
+#    dlib = nb_data-4
+#    sr = dlib*sigma0_2_MC
+#    gammaC1, gammaC2 = chi2.interval(0.95, dlib) # automatisation de la recherche
+#    print("Valeur de l'intervalle : [%.3f , %.3f]" %(gammaC1, gammaC2))
+#    
+#    
+    # Validation du test du chi-deux
+#    test = int()
+#    
+#    if gammaC1 <= sr and sr <= gammaC2:
+#        test = 1
+#        s02 = np.dot(np.dot(V.T, matP),V)/(len(matB)-len(X))
+#        print("\n=> VALIDATION DU TEST DU CHI-DEUX")
+#    else :
+#        test = 0
+#        s02 = 1
+#        print("\n=> NON VALIDATION DU TEST DU CHI-DEUX")
+#        print("Il faut reprendre les données ou la loi suivie par les erreurs de mesure n'est pas la loi normale.")
+        
+        
+        
     
     print("------------------MOINDRES-CARRES ELIMINATION PTS FAUX-----------------------")
     # Moindres-carré
