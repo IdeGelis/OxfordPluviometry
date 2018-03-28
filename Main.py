@@ -14,6 +14,77 @@ from scipy.stats import chi2, norm
 #import lmfit
 
 
+#############################################################################
+#                                                                           #
+#                       Fonctions préliminaires                             #
+#                                                                           #
+#############################################################################
+
+def PtsFaux2(poids,residus):
+    """
+    Elimination des points faux
+    Modification du poids de la valeur ayant le résidu le plus élevé
+    """
+    ir = np.argmax(residus)
+    poids[ir][ir] = 0.0
+    return poids
+
+def PtsFaux(obs,compObs):
+    temp = []
+    for i in range(obs.shape[0]):
+        if abs(obs[i]-compObs[i])>3:
+            temp.append(obs[i])
+    temp = np.asarray(temp)
+    temp.reshape(len(temp),1)
+    return temp
+
+
+def testSeuil(residus, seuil):
+    cpt = 0
+    for i in range (residus.shape[0]):
+        if residus[i,0] <= seuil : 
+            cpt +=1
+    return cpt*100/residus.shape[0]
+
+
+def Gauss(x,A,mu,sigma):
+    """
+    Création d'une gaussienne (es fonctions pré'implémentées ne marchent pas...)
+    """
+    gauss = A * np.exp(-1/2*(((x-mu)/sigma)**2))
+    return gauss
+
+
+def grapheHisto(residus,variance,mode="normalized"):
+    plt.figure()
+    if mode=="normalized":
+        plt.title("Histogramme des résidus normalisés")
+    else:
+        plt.title("Histogramme des résidus")
+    (n, bins, patches) = plt.hist(residus)
+    x = np.arange(bins[0],bins[-1])
+    x = x.reshape(x.shape[0],1)
+    if np.size(n)%2 == 0:
+        A = n[int(np.size(n)/2)]
+        #mu = bins[int(np.size(n)/2)+1]
+    else :  
+        A = (n[np.floor(np.size(n)/2)] + n[np.floor(np.size(n)/2)+1]) / 2
+        #mu = (bins[np.floor(np.size(n)/2)] + bins[np.floor(np.size(n)/2+1)]) / 2
+    plt.plot(x,Gauss(x,A,0,np.sqrt(variance)))
+    plt.show()
+    print ('Sigma0_2 :', variance[0][0])
+
+
+
+
+
+
+#############################################################################
+#                                                                           #
+#                       Fonctions principales                               #
+#                                                                           #
+#############################################################################
+
 
 def mod(tps, param):
     """
@@ -27,7 +98,7 @@ def mod(tps, param):
 
 def MC(temperature,tps,mode):
     """
-    Moindres carrés
+    Méthode des Moindres carrés
     """
     
     # X : vecteur des paramètres A, omega, phi, constante initialisé 
@@ -79,7 +150,18 @@ def MC(temperature,tps,mode):
         X = Xchap
         
         if mode == "elim" :
+            #sol1
             P = PtsFaux2(P,vchap)
+            #sol2
+#            l = PtsFaux(l,lchap)
+#            nb_data = np.size(l)
+#            Ql = np.eye(nb_data)
+#            P = np.linalg.inv(Ql)
+#            """
+#            Probleme quand on rentre pour la 2e fois dans la boucle : 
+#                l'algo n'aime pas changer de dimension pour A
+#                ValueError: could not broadcast input array from shape (1800) into shape (156)
+#            """
 
     
     return (X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm)
@@ -87,58 +169,10 @@ def MC(temperature,tps,mode):
 
 
 
-def PtsFaux2(poids,residus):
-    """
-    Elimination des points faux
-    Modification du poids de la valeur ayant le résidu le plus élevé
-    """
-    ir1 = np.argmax(residus)
-    poids[ir1][ir1] = 0.0
-    return poids
-
-
-
-
-def testSeuil(residus, seuil):
-    cpt = 0
-    for i in range (residus.shape[0]):
-        if residus[i,0] <= seuil : 
-            cpt +=1
-    return cpt*100/residus.shape[0]
-
-
-def Gauss(x,A,mu,sigma):
-    """
-    Création d'une gaussienne (es fonctions pré'implémentées ne marchent pas...)
-    """
-    gauss = A * np.exp(-1/2*(((x-mu)/sigma)**2))
-    return gauss
-
-    
-def grapheHisto(residus,variance,mode="normalized"):
-    plt.figure()
-    if mode=="normalized":
-        plt.title("Histogramme des résidus normalisés")
-    else:
-        plt.title("Histogramme des résidus")
-    (n, bins, patches) = plt.hist(residus)
-    x = np.arange(bins[0],bins[-1])
-    x = x.reshape(x.shape[0],1)
-    if np.size(n)%2 == 0:
-        A = n[int(np.size(n)/2)]
-        mu = bins[int(np.size(n)/2)]
-    else :  
-        A = (n[np.floor(np.size(n)/2)] + n[np.floor(np.size(n)/2)+1]) / 2
-        mu = (bins[np.floor(np.size(n)/2)] + bins[np.floor(np.size(n)/2+1)]) / 2
-    plt.plot(x,Gauss(x,A,0,np.sqrt(variance)))
-    plt.show()
-    print ('Sigma0_2 :', variance[0][0])
-
-
     
 def ransac(t,T,K,temperature, tps):
-    """ RANSAC """
-    """
+    """ Méthode RANSAC 
+
     Objectif: Ajustement robuste d'un modèle à un jeu de données S contenant des points faux.
     """
     
@@ -244,9 +278,8 @@ if __name__=="__main__":
     
     """
     NOTE DE DAVID!:
-    Il faut divisé les résidus par leur écarts type (donc racine de la diagonale de Qvchap)
+    Il faut diviser les résidus par leur écarts type (donc racine de la diagonale de Qvchap)
     Division avant le test d'elimination des points faux mais aussi pour tracer les histogrammes
-	
 	
     residus divisé par leurs ecarts-types 99.9% entre -3 3
 	
@@ -255,16 +288,8 @@ if __name__=="__main__":
 	
 	
 	 PEnser au Chi-2
-	
-	 Penser au aux courbes des normales 
-    """
-    
-    
-    """
-
-    courbe normale ; elimination pts faux MC ; residus divisé par leurs ecarts-types 99.9% entre -3 3 ; chi²
-    """
-    
+	 """
+   
     
     
     """ 
@@ -276,11 +301,10 @@ if __name__=="__main__":
     nb_data = temperature.shape[0]
     
     print("---------------------------MOINDRES-CARRES-----------------------------------")
-    # Moindres-carré
+    # Calcul des moindres-carrés
     X_MC, sigma0_2_MC, Qlchap_MC, Qvchap_MC, Qxchap_MC, lchap_MC, vchap_MC, vnorm_MC = MC(temperature,tps,mode="notElim")
     
-    """ Affichage des résultats des MC """
-
+    # Affichage des résultats des MC pour l'ensemble des données (150 années)
     plt.figure()
     plt.plot(tps,temperature, label = "Observations")
     plt.plot(tps, mod(tps,X_MC), label = "Modèle issus des MC")
@@ -292,7 +316,8 @@ if __name__=="__main__":
     plt.ylabel("temperature [°C]")
     plt.legend()
     plt.show()
-        
+    
+    # Affichage des résultats des MC sur un échantillon des 150 années (20 ans)
     plt.figure()
     plt.plot(tps[50:50+20*12,:],temperature[50:50+20*12,:], label = "Observations")
     plt.plot(tps[50:50+20*12,:], mod(tps[50:50+20*12,:],X_MC), label = "Modèle issus des MC")
@@ -305,10 +330,10 @@ if __name__=="__main__":
     plt.legend()
     plt.show()
        
-    #Histogramme des résidus simples avec suppression des valeurs fausses    
+    #Histogramme des résidus simples sans suppression des points faux    
     grapheHisto(vchap_MC,sigma0_2_MC,mode="simple")
     
-    #Histogramme des résidus normalisés avec suppression des valeurs fausses    
+    #Histogramme des résidus normalisés sans suppression des points faux    
     grapheHisto(vnorm_MC,sigma0_2_MC,mode="normalized")
 
     
@@ -344,11 +369,10 @@ if __name__=="__main__":
         
     
     print("------------------MOINDRES-CARRES ELIMINATION PTS FAUX-----------------------")
-    # Moindres-carré
+    # Calcul des moindres-carré
     X_MC2, sigma0_2_MC2, Qlchap_MC2, Qvchap_MC2, Qxchap_MC2, lchap_MC2, vchap_MC2,vnorm_MC2 = MC(temperature,tps,mode="elim")
     
-    """ Affichage des résultats des MC """
-
+    # Affichage des résultats des MC sur l'ensemble du jeu de données (150 ans)
     plt.figure()
     plt.plot(tps,temperature, "o", label = "Observations")
     plt.plot(tps, mod(tps,X_MC2))
@@ -361,11 +385,10 @@ if __name__=="__main__":
     plt.legend()
     plt.show()
         
-        
-    #Histogramme des résidus simples sans suppression des valeurs fausses    
+    # Histogramme des résidus simples avec suppression des points faux  
     grapheHisto(vchap_MC2,sigma0_2_MC2,mode="simple")
     
-    #Histogramme des résidus normalisés sans suppression des valeurs fausses    
+    # Histogramme des résidus normalisés avec suppression des points faux    
     grapheHisto(vnorm_MC2,sigma0_2_MC2,mode="normalized")
     
     
