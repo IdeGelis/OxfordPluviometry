@@ -42,17 +42,16 @@ def MC(temperature,tps,mode):
     P = np.linalg.inv(Ql)
     
     # Valeurs arbitraires pour rentrer dans la boucle itérative
-    sigma0_2_last = 10000.0
-    sigma0_2 = 13000.0
+    sigma0_2_last = [[10000.0]]
+    sigma0_2 = [[13000.0]]
     
     # Itérations 
-    while sigma0_2 != sigma0_2_last :
+    while abs(sigma0_2[0][0]-sigma0_2_last[0][0]) > 10e-6:
         # Matrice A jacobienne du modèle linéarisé
         A = np.ones((nb_data,4))
         A[:,0] = np.cos(X[1,0]*tps[:,0] + X[2,0])
         A[:,1] = -X[0,0]*tps[:,0]*np.sin(X[1,0]*tps[:,0] + X[2,0])
         A[:,2] = -X[0,0]*np.sin(X[1,0]*tps[:,0] + X[2,0])
-        
         B = l - mod(tps,X).reshape((nb_data,1))
         
         # N = A.T*P*A, K = A.T*P*B
@@ -67,12 +66,10 @@ def MC(temperature,tps,mode):
         # Résidus
         vchap = B - np.dot(A,dXchap)
         lchap = l - vchap
-        
         # Matrice de variance covariance
         Qxchap = np.linalg.inv(np.dot(np.dot(np.transpose(A),P),A))
         Qvchap = Ql - np.dot(np.dot(A,Qxchap),A.T)
         Qlchap = Ql - Qvchap
-        
         # Résidus normalisés
         vnorm = np.divide(vchap,(np.sqrt(np.diag(Qvchap))).reshape(1800,1))
 
@@ -110,15 +107,35 @@ def testSeuil(residus, seuil):
     return cpt*100/residus.shape[0]
 
 
-def Gauss(x,mu,sigma):
+def Gauss(x,A,mu,sigma):
     """
     Création d'une gaussienne (es fonctions pré'implémentées ne marchent pas...)
     """
-    coeff = 1/(sigma*np.sqrt(2*np.pi))
-    gauss = 400+ coeff * np.exp(-1/2*((x-mu)/sigma)**2)
+    gauss = A * np.exp(-1/2*(((x-mu)/sigma)**2))
     return gauss
 
+    
+def grapheHisto(residus,variance,mode="normalized"):
+    plt.figure()
+    if mode=="normalized":
+        plt.title("Histogramme des résidus normalisés")
+    else:
+        plt.title("Histogramme des résidus")
+    (n, bins, patches) = plt.hist(residus)
+    x = np.arange(bins[0],bins[-1])
+    x = x.reshape(x.shape[0],1)
+    if np.size(n)%2 == 0:
+        A = n[int(np.size(n)/2)]
+        mu = bins[int(np.size(n)/2)]
+    else :  
+        A = (n[np.floor(np.size(n)/2)] + n[np.floor(np.size(n)/2)+1]) / 2
+        mu = (bins[np.floor(np.size(n)/2)] + bins[np.floor(np.size(n)/2+1)]) / 2
+    plt.plot(x,Gauss(x,A,0,np.sqrt(variance)))
+    plt.show()
+    print ('Sigma0_2 :', variance[0][0])
 
+
+    
 def ransac(t,T,K,temperature, tps):
     """ RANSAC """
     """
@@ -244,8 +261,8 @@ if __name__=="__main__":
     
     
     """
-    Fait : résidus normalisés ; imprimer les histogrammes des résidus normalisés ; mode d'itération : arrêt quand sigma0² stagne
-    Reste à faire : courbe normale ; elimination pts faux MC ; residus divisé par leurs ecarts-types 99.9% entre -3 3 ; chi²
+
+    courbe normale ; elimination pts faux MC ; residus divisé par leurs ecarts-types 99.9% entre -3 3 ; chi²
     """
     
     
@@ -287,28 +304,13 @@ if __name__=="__main__":
     plt.ylabel("temperature [°C]")
     plt.legend()
     plt.show()
+       
+    #Histogramme des résidus simples avec suppression des valeurs fausses    
+    grapheHisto(vchap_MC,sigma0_2_MC,mode="simple")
     
-    plt.figure()
-    plt.title('fonction gaussienne')
-    x = np.linspace(0, 6*np.sqrt(sigma0_2_MC), 100)
-    y = Gauss(x,0,np.sqrt(sigma0_2_MC))
-    plt.plot(x,y)
-    plt.show()
-    
-    plt.figure()
-    plt.title("Histogramme des résidus")
-    
-    plt.hist(vchap_MC)
-    plt.show()
-    print ('Sigma0_2 :', sigma0_2_MC[0][0])
-    
-    plt.figure()
-    plt.title("Histogramme des résidus normalisés")
-    plt.hist(vnorm_MC)
-    # Afficher la courbe de la loi normale de moyenne 0 et d'écart type sigma0
-    plt.plot(x,norm.pdf(x,0,np.sqrt(sigma0_2_MC)))
-    plt.show()
-    print ('Sigma0_2 :', sigma0_2_MC[0][0])
+    #Histogramme des résidus normalisés avec suppression des valeurs fausses    
+    grapheHisto(vnorm_MC,sigma0_2_MC,mode="normalized")
+
     
     
     """
@@ -360,20 +362,11 @@ if __name__=="__main__":
     plt.show()
         
         
-    plt.figure()
-    plt.title("Histogramme des résidus")
-    # Afficher la courbe de la loi normale de moyenne 0 et d'écart type sigma0
-    #x = np.linspace(0, 6*np.sqrt(sigma0_2), 100)
-    #plt.plot(x,sc.stats.norm.pdf(x,0,np.sqrt(sigma0_2)))
-    plt.hist(vchap_MC2)
-    plt.show()
-    print ('Sigma0_2 :', sigma0_2_MC2[0][0])
+    #Histogramme des résidus simples sans suppression des valeurs fausses    
+    grapheHisto(vchap_MC2,sigma0_2_MC2,mode="simple")
     
-    plt.figure()
-    plt.title("Histogramme des résidus normalisés")
-    plt.hist(vnorm_MC2)
-    plt.show()
-    print ('Sigma0_2 :', sigma0_2_MC2[0][0])
+    #Histogramme des résidus normalisés sans suppression des valeurs fausses    
+    grapheHisto(vnorm_MC2,sigma0_2_MC2,mode="normalized")
     
     
     
