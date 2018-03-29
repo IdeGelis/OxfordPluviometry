@@ -157,7 +157,7 @@ def MC(temperature,tps):
         X = Xchap
         
         cpt += 1
-    
+
     return (X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm)
 
 
@@ -176,18 +176,19 @@ def MC_elim(temperature,tps):
     
     # Elimination des points faux : Appel de la fonction MC
     cpt = 0
-    while nb_ptfaux2 != nb_ptfaux1 and len(l)>0 and cpt<6000000000000:
+    while nb_ptfaux2 != nb_ptfaux1 and len(l)>0 and cpt<600000:
         l_bis,tps_bis = PtsFaux(l,mod(tps_bis,X),tps_bis,vnorm,sigma0_2)
         X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm = MC(l_bis,tps_bis)
         l = l_bis
         nb_ptfaux2 = nb_ptfaux1
         nb_ptfaux1 = len(temperature) - len(l)
         cpt +=1
-        print(cpt)
     
     plt.figure()
-    plt.plot(tps,temperature,'o')
-    plt.plot(tps_bis,l_bis,'.')
+    plt.title("Visualisation des observations conservées")
+    plt.plot(tps,temperature,'o',label="obs conservée")
+    plt.plot(tps_bis,l_bis,'.',label="obs supprimée")
+    plt.legend()
     plt.show()
      
     nb_ptsFaux = (len(temperature)-len(tps_bis)) 
@@ -345,7 +346,7 @@ if __name__=="__main__":
     print("------------------MOINDRES-CARRES ELIMINATION PTS FAUX-----------------------")
     # Calcul des moindres-carré
     X_MC2, sigma0_2_MC2, Qlchap_MC2, Qvchap_MC2, Qxchap_MC2, lchap_MC2, vchap_MC2,vnorm_MC2, nb_ptselim = MC_elim(temperature,tps)
-    
+
     # Affichage des résultats des MC sur l'ensemble du jeu de données (150 ans)
     plt.figure()
     plt.plot(tps,temperature, "o", label = "Observations")
