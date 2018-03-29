@@ -224,7 +224,7 @@ def ransac(t,T,K,temperature, tps):
         # Graphe des points aléatoires choisi
 #        plt.figure()
 #        plt.plot(jd_tps,jd_temperature, "o", label = "Observations sélectionnées au tirage aléatoire")
-#        titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+#        titre = "Températures maximales à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
 #        plt.title(titre)
 #        plt.xlabel("temps [annees]")
 #        plt.ylabel("temperature [°C]")
@@ -283,7 +283,7 @@ if __name__=="__main__":
     
     plt.figure()
     plt.plot(tps,temperature)
-    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+    titre = "Températures maximales à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
     plt.title(titre)
     plt.xlabel("temps [annees]")
     plt.ylabel("temperature [°C]")
@@ -325,7 +325,7 @@ if __name__=="__main__":
     plt.plot(tps, mod(tps,X_MC), label = "Modèle issus des MC")
     #Test pour les params initiaux
     #•plt.plot(tps, mod(tps,np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)))
-    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+    titre = "Températures maximales à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
     plt.title(titre)
     plt.xlabel("temps [annees]")
     plt.ylabel("temperature [°C]")
@@ -338,7 +338,7 @@ if __name__=="__main__":
     plt.plot(tps[50:50+20*12,:], mod(tps[50:50+20*12,:],X_MC), label = "Modèle issus des MC")
     #Test pour les params initiaux
     #•plt.plot(tps, mod(tps,np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)))
-    titre = "Zoom sur les precipitations à Oxford de " + str(date_deb+50) + " à " + str(date_deb+70)
+    titre = "Zoom sur les températures maximales à Oxford de " + str(date_deb+50) + " à " + str(date_deb+70)
     plt.title(titre)
     plt.xlabel("temps [annees]")
     plt.ylabel("temperature [°C]")
@@ -393,7 +393,7 @@ if __name__=="__main__":
     plt.plot(tps, mod(tps,X_MC2))
     #Test pour les params initiaux
     #•plt.plot(tps, mod(tps,np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)))
-    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+    titre = "Températures maximales à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
     plt.title(titre)
     plt.xlabel("temps [annees]")
     plt.ylabel("temperature [°C]")
@@ -443,7 +443,7 @@ if __name__=="__main__":
     plt.plot(tps,temperature, "o", label = "Observations")
     plt.plot(sel_tps,sel_temperature, "o", label = "Observations sélectionnées")
     plt.plot(tps, mod(tps,X_ransac))
-    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+    titre = "Température maximales à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
     plt.title(titre)
     plt.xlabel("temps [annees]")
     plt.ylabel("temperature [°C]")
