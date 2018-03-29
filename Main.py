@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Feb 28 19:09:59 2018
-
 @author: Iris and Mannaig
 """
 
@@ -183,7 +182,6 @@ def MC(temperature,tps,mode):
     
 def ransac(t,T,K,temperature, tps):
     """ Méthode RANSAC 
-
     Objectif: Ajustement robuste d'un modèle à un jeu de données S contenant des points faux.
     """
     
@@ -458,11 +456,3 @@ if __name__=="__main__":
 # 
 #    print(len(sel_tps))
 #    print(len(sel_tps)*100/1800, '%')
-        
-                
-        
-
-
-    
-    
-    
