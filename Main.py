@@ -19,27 +19,17 @@ from scipy.stats import chi2, norm
 #                                                                           #
 #############################################################################
 
-def PtsFaux2(poids,residus):
-    """
-    Elimination des points faux
-    Modification du poids de la valeur ayant le résidu le plus élevé
-    """
-    ir = np.argmax(residus)
-    poids[ir][ir] = 0.0
-    return poids
 
-def PtsFaux(obs,modele,tps):
-    newTps = []
-    newObs = []
-    #for i in range(obs.shape[0]):
+def PtsFaux(obs,modele,tps,residus_norm,sigma0_2):
     coord = np.where(abs(obs-modele)<3)
-    for i in range(len(coord[0])):
-        newTps.append(tps[i])
-        newObs.append(obs[i])
-    newObs = np.asarray(newObs)
-    newObs.reshape(len(newObs),1)
-    newTps = np.asarray(newObs)
-    newTps.reshape(len(newObs),1)
+#    coord = np.where(abs(residus_norm)<2*sigma0_2)
+    newObs = np.zeros((len(coord[0]),1))
+    newTps = np.zeros((len(coord[0]),1))
+    c = 0
+    for i in coord[0]:
+        newObs[c] = obs[i]
+        newTps[c] = tps[i]
+        c += 1
     return newObs,newTps
 
 
@@ -53,7 +43,7 @@ def testSeuil(residus, seuil):
 
 def Gauss(x,A,mu,sigma):
     """
-    Création d'une gaussienne (es fonctions pré'implémentées ne marchent pas...)
+    Création d'une gaussienne
     """
     gauss = A * np.exp(-1/2*(((x-mu)/sigma)**2))
     return gauss
@@ -110,7 +100,6 @@ def MC(temperature,tps,mode):
 
     # Données
     l = temperature
-    tps_bis = tps
     nb_data = np.size(l)
     
     # Matrice de poids : identité par défaut
@@ -123,13 +112,13 @@ def MC(temperature,tps,mode):
     
     cpt = 0
     # Itérations 
-    while abs(sigma0_2[0][0]-sigma0_2_last[0][0]) > 10e-6 :
+    while abs(sigma0_2[0][0]-sigma0_2_last[0][0]) > 10e-6 and cpt<10:
         # Matrice A jacobienne du modèle linéarisé
         A = np.ones((nb_data,4))
-        A[:,0] = np.cos(X[1,0]*tps_bis[:,0] + X[2,0])
-        A[:,1] = -X[0,0]*tps_bis[:,0]*np.sin(X[1,0]*tps_bis[:,0] + X[2,0])
-        A[:,2] = -X[0,0]*np.sin(X[1,0]*tps_bis[:,0] + X[2,0])
-        B = l - mod(tps_bis,X).reshape((nb_data,1))
+        A[:,0] = np.cos(X[1,0]*tps[:,0] + X[2,0])
+        A[:,1] = -X[0,0]*tps[:,0]*np.sin(X[1,0]*tps[:,0] + X[2,0])
+        A[:,2] = -X[0,0]*np.sin(X[1,0]*tps[:,0] + X[2,0])
+        B = l - mod(tps,X).reshape((nb_data,1))
 
         # N = A.T*P*A, K = A.T*P*B
         N = np.dot(np.dot(A.T,P),A)
@@ -147,32 +136,20 @@ def MC(temperature,tps,mode):
         Qxchap = np.linalg.inv(np.dot(np.dot(np.transpose(A),P),A))
         Qvchap = Ql - np.dot(np.dot(A,Qxchap),A.T)
         Qlchap = Ql - Qvchap
+        
         # Résidus normalisés
         vnorm = np.divide(vchap,(np.sqrt(np.diag(Qvchap))).reshape(nb_data,1))
 
         sigma0_2_last = sigma0_2
         sigma0_2 = np.dot(np.dot(vchap.T,P),vchap)/(nb_data - 4)
-        print(sigma0_2)
         X = Xchap
         
-        #if mode == "elim" :
-            #sol1
-            #P = PtsFaux2(P,vchap)
-#            #sol2
-    #        print(nb_data)
-    #        l,tps_bis = PtsFaux(temperature,mod(tps,X),tps)
-    #        nb_data = np.size(l)
-    #        Ql = np.eye(nb_data)
-    #        P = np.linalg.inv(Ql)
-        
         cpt += 1
-        print(cpt)
-        """
-        Probleme quand on rentre pour la 2e fois dans la boucle : 
-            l'algo n'aime pas changer de dimension pour A
-            ValueError: could not broadcast input array from shape (1800) into shape (156)
-        """
 
+    # Elimination des points faux : récursion
+    if mode == "elim" :
+        l,tps_bis = PtsFaux(temperature,mod(tps,X),tps,vnorm,sigma0_2)
+        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm = MC(l,tps_bis,mode="notELim")
     
     return (X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm)
 
@@ -292,6 +269,8 @@ if __name__=="__main__":
 	
     residus divisé par leurs ecarts-types 99.9% entre -3 3
 	
+    proposition : Pas de seuils mais on garde les valeurs dont les residus < |2*sigma| 
+    
 	 RANSAC: regarder le pourcentage de points eliminer par la méthode des points faux pour eliminer un pourcentage correspondant par Ransac
 	 Ajouter dans le rapport que c'est subjectif ce choix de paramètres
 	
