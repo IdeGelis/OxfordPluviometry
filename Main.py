@@ -19,8 +19,18 @@ from scipy.stats import chi2, norm
 #                                                                           #
 #############################################################################
 
-#def testChi2(sigma0_2,n,p):
-#    pass
+def testChi2(sigma0_2,n,p, prob):
+    a = 1-prob
+    
+    # -- Calcul des bornes de la loi du chi2 à n-p degrés de liberté pour des probabilité a/2 et 1-a/2 --
+    borne_inf = chi2.ppf(a/2,n-p)/(n-p)
+    borne_sup = chi2.ppf(1-a/2,n-p)/(n-p)
+    print("Chi2 borne inférieure: ",borne_inf)
+    print("Chi2 borne supérieure: ",borne_sup)
+    if borne_inf<=sigma0_2<=borne_sup:
+        return True
+    else:
+        return False
 
 def PtsFaux(obs,modele,tps,residus_norm,sigma0_2):
 #    coord = np.where(abs(obs-modele)<2.5)
@@ -109,12 +119,12 @@ def MC(temperature,tps):
     P = np.linalg.inv(Ql)
     
     # Valeurs arbitraires pour rentrer dans la boucle itérative
-    sigma0_2_last = [[10000.0]]
-    sigma0_2 = [[13000.0]]
+    sigma0_2_last = [[1]]
+    sigma0_2 = [[13000]]
     
     cpt = 0
     # Itérations 
-    while abs(sigma0_2[0][0]-sigma0_2_last[0][0]) > 10e-6 and cpt<10:
+    while abs(sigma0_2[0][0]-sigma0_2_last[0][0]) > 10e-6 and cpt<20:
         # Matrice A jacobienne du modèle linéarisé
         A = np.ones((nb_data,4))
         A[:,0] = np.cos(X[1,0]*tps[:,0] + X[2,0])
@@ -160,27 +170,30 @@ def MC_elim(temperature,tps):
     # Initialisation
     nb_ptsFaux = 0
     l, tps_bis = temperature, tps
-    nb_ptfaux1 = len(temperature)- len(l)
+    nb_ptfaux1 = len(temperature) - len(l)
     nb_ptfaux2 = 0.1
     X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm = MC(temperature,tps)
     
     # Elimination des points faux : Appel de la fonction MC
-    while nb_ptfaux2 != nb_ptfaux1 and len(l)>0 :
+    cpt = 0
+    while nb_ptfaux2 != nb_ptfaux1 and len(l)>0 and cpt<6000000000000:
         l_bis,tps_bis = PtsFaux(l,mod(tps_bis,X),tps_bis,vnorm,sigma0_2)
         X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm = MC(l_bis,tps_bis)
         l = l_bis
         nb_ptfaux2 = nb_ptfaux1
-        nb_ptfaux1 = len(temperature)- len(l)
+        nb_ptfaux1 = len(temperature) - len(l)
+        cpt +=1
+        print(cpt)
     
     plt.figure()
     plt.plot(tps,temperature,'o')
     plt.plot(tps_bis,l_bis,'.')
     plt.show()
      
-    nb_ptsFaux = (len(temperature)-len(tps_bis)) / len(temperature)*100
-    print("Points faux : ",nb_ptsFaux,"%")
+    nb_ptsFaux = (len(temperature)-len(tps_bis)) 
+    print("Points faux : ",nb_ptsFaux/ len(temperature)*100,"%")
     
-    return (X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm)
+    return (X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm,nb_ptsFaux)
 
 
     
@@ -213,7 +226,7 @@ def ransac(t,T,K,temperature, tps):
         # Th de Shanon Freq_echantillonage > 2/12 = 1/6
         # Ce qui implique un point tous les 6 mois
         
-        # Tirage des valeurs initiales
+        # Tirage d'un ensemble de valeurs aléatoires
         tmp = 0       
         for i in range (n):
             aleat = np.random.randint(6)
@@ -221,29 +234,23 @@ def ransac(t,T,K,temperature, tps):
             jd_tps[i,0] = tps[tmp+aleat]
             tmp += 6
         
-        # Graphe des points aléatoires choisi
-#        plt.figure()
-#        plt.plot(jd_tps,jd_temperature, "o", label = "Observations sélectionnées au tirage aléatoire")
-#        titre = "Températures maximales à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
-#        plt.title(titre)
-#        plt.xlabel("temps [annees]")
-#        plt.ylabel("temperature [°C]")
-#        plt.show()
-        
+        # Moindres carrés sur l'ensemble aléatoire
         X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap, vnorm = MC(jd_temperature,jd_tps)
+        
         
         # Selection des points qui collent au modèle
         for i in range (nb_data):
-            if np.abs(mod(tps[i,0],X) - temperature[i,0]) < t:
+#            print(np.abs(mod(tps[i,0],X) - temperature[i,0]))
+            if np.abs(mod(tps[i,0],X) - temperature[i,0]) <= t:
                ens_pts_temperature.append(temperature[i,0])
                ens_pts_tps.append(tps[i,0])
         
-
+        # Pour garder le meilleur des ensembles, ie le plus grand
         if len(ens_pts_temperature)>=sz_max_ens:           
             meilleur_ens_pts_temperature = ens_pts_temperature
             meilleur_ens_pts_tps = ens_pts_tps
             sz_max_ens = len(meilleur_ens_pts_temperature)
-               
+     
         # Si suffisement de points collent au modèle, la boucle est arrêtée
         if (len(ens_pts_temperature)>=T):         
             sz_max_ens = len(ens_pts_temperature)
@@ -264,7 +271,8 @@ def ransac(t,T,K,temperature, tps):
         
         X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap, vnorm = MC(arr_ens_pts_temperature, arr_ens_pts_tps)
     
-    return (meilleur_ens_pts_temperature, meilleur_ens_pts_tps, X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap)
+    
+    return (meilleur_ens_pts_temperature, meilleur_ens_pts_tps, X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm)
 
 
 
@@ -288,25 +296,7 @@ if __name__=="__main__":
     plt.xlabel("temps [annees]")
     plt.ylabel("temperature [°C]")
     plt.show()
-    
-    """
-    NOTE DE DAVID!:
-    Il faut diviser les résidus par leur écarts type (donc racine de la diagonale de Qvchap)
-    Division avant le test d'elimination des points faux mais aussi pour tracer les histogrammes
-	
-    residus divisé par leurs ecarts-types 99.9% entre -3 3
-	
-    proposition : Pas de seuils mais on garde les valeurs dont les residus < |2*sigma| 
-    
-	 RANSAC: regarder le pourcentage de points eliminer par la méthode des points faux pour eliminer un pourcentage correspondant par Ransac
-	 Ajouter dans le rapport que c'est subjectif ce choix de paramètres
-	
-	
-	 PEnser au Chi-2
-	 """
-   
-    
-    
+        
     """ 
     Le modèle testé est A*cos(omega*tps + phi) + cste 
     Il y a donc 4 paramètres.    
@@ -323,8 +313,6 @@ if __name__=="__main__":
     plt.figure()
     plt.plot(tps,temperature, label = "Observations")
     plt.plot(tps, mod(tps,X_MC), label = "Modèle issus des MC")
-    #Test pour les params initiaux
-    #•plt.plot(tps, mod(tps,np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)))
     titre = "Températures maximales à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
     plt.title(titre)
     plt.xlabel("temps [annees]")
@@ -336,8 +324,6 @@ if __name__=="__main__":
     plt.figure()
     plt.plot(tps[50:50+20*12,:],temperature[50:50+20*12,:], label = "Observations")
     plt.plot(tps[50:50+20*12,:], mod(tps[50:50+20*12,:],X_MC), label = "Modèle issus des MC")
-    #Test pour les params initiaux
-    #•plt.plot(tps, mod(tps,np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)))
     titre = "Zoom sur les températures maximales à Oxford de " + str(date_deb+50) + " à " + str(date_deb+70)
     plt.title(titre)
     plt.xlabel("temps [annees]")
@@ -345,103 +331,74 @@ if __name__=="__main__":
     plt.legend()
     plt.show()
        
-    #Histogramme des résidus simples sans suppression des points faux    
-    grapheHisto(vchap_MC,sigma0_2_MC,mode="simple")
     
     #Histogramme des résidus normalisés sans suppression des points faux    
     grapheHisto(vnorm_MC,sigma0_2_MC,mode="normalized")
 
-    
-    
-    """
-    TEST CHI-2
-    Le test du chi-deux permet, en comparant la valeur du facteur unitaire de variance
-    avec la valeur théorique, de qualifier le résultat de l'ajustement.
-    """
-    
-    # Détermination des bornes de l'intervalle
-    #dlib: degré de liberté
-#    dlib = nb_data-4
-#    sr = dlib*sigma0_2_MC
-#    gammaC1, gammaC2 = chi2.interval(0.95, dlib) # automatisation de la recherche
-#    print("Valeur de l'intervalle : [%.3f , %.3f]" %(gammaC1, gammaC2))
+    #Test du Chi-2
+    print("Résultats du test du Chi-2 : ", testChi2(sigma0_2_MC,len(temperature),4,0.95))
+    #Affichage des paramètres
+    print("Paramètres estimés: ",X_MC)  
+    #Matrice de variance covariance des paramètres
+    print("Matrice de variance-covariance des paramètres: ",Qxchap_MC)        
 #    
-#    
-    # Validation du test du chi-deux
-#    test = int()
-#    
-#    if gammaC1 <= sr and sr <= gammaC2:
-#        test = 1
-#        s02 = np.dot(np.dot(V.T, matP),V)/(len(matB)-len(X))
-#        print("\n=> VALIDATION DU TEST DU CHI-DEUX")
-#    else :
-#        test = 0
-#        s02 = 1
-#        print("\n=> NON VALIDATION DU TEST DU CHI-DEUX")
-#        print("Il faut reprendre les données ou la loi suivie par les erreurs de mesure n'est pas la loi normale.")
-        
-        
-        
-    
     print("------------------MOINDRES-CARRES ELIMINATION PTS FAUX-----------------------")
     # Calcul des moindres-carré
-    X_MC2, sigma0_2_MC2, Qlchap_MC2, Qvchap_MC2, Qxchap_MC2, lchap_MC2, vchap_MC2,vnorm_MC2 = MC_elim(temperature,tps)
+    X_MC2, sigma0_2_MC2, Qlchap_MC2, Qvchap_MC2, Qxchap_MC2, lchap_MC2, vchap_MC2,vnorm_MC2, nb_ptselim = MC_elim(temperature,tps)
     
     # Affichage des résultats des MC sur l'ensemble du jeu de données (150 ans)
     plt.figure()
     plt.plot(tps,temperature, "o", label = "Observations")
     plt.plot(tps, mod(tps,X_MC2))
-    #Test pour les params initiaux
-    #•plt.plot(tps, mod(tps,np.array([[20,(2*np.pi),np.pi,13.69]]).reshape(4,1)))
     titre = "Températures maximales à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
     plt.title(titre)
     plt.xlabel("temps [annees]")
     plt.ylabel("temperature [°C]")
     plt.legend()
     plt.show()
+    
+    # Affichage des résultats des MC sur un échantillon des 150 années (20 ans)
+    plt.figure()
+    plt.plot(tps[50:50+20*12,:],temperature[50:50+20*12,:], label = "Observations")
+    plt.plot(tps[50:50+20*12,:], mod(tps[50:50+20*12,:],X_MC2), label = "Modèle issus des MC")
+    titre = "Zoom sur les températures maximales à Oxford de " + str(date_deb+50) + " à " + str(date_deb+70)
+    plt.title(titre)
+    plt.xlabel("temps [annees]")
+    plt.ylabel("temperature [°C]")
+    plt.legend()
+    plt.show()
         
-    # Histogramme des résidus simples avec suppression des points faux  
-    grapheHisto(vchap_MC2,sigma0_2_MC2,mode="simple")
     
     # Histogramme des résidus normalisés avec suppression des points faux    
     grapheHisto(vnorm_MC2,sigma0_2_MC2,mode="normalized")
     
+    #Test du Chi-2
+    print("Résultats du test du Chi-2 : ", testChi2(sigma0_2_MC2,nb_ptselim,4,0.95))  
+
+    #Affichage des paramètres
+    print("Paramètres estimés: ",X_MC2)      
     
     
-    
-    """
-    Rajouter matrice de variance co-variance!!!
-    Et le test du CHI-2
-    
-    """ 
-        
-    """ Faire élimination des points faux en mode automatique """
-    
-    """
-    Poser un critere d'élimination : pex à 3*sigma pour trouver et éliminer les erreurs dans les données
-    ou
-    Estimer de manière itérative des droites de regression en eliminant a chaque iteration le 
-    residu le plus fort. Poser un critere d'arret=0.8 pex
-    
-    Idee : Calculer l'écart entre la valeur et le modele estime. Puis faire un predicat sur cette valeur :
-        si |ecart| > ... : elimination
-        si ecart <= ... : conservation
-    Puis vérification du modèle.
-    """
-    
+    #Matrice de variance covariance des paramètres
+    print("Matrice de variance-covariance des paramètres: ",Qxchap_MC2)
+#        
     print("------------------------------RANSAC--------------------------------------")
     
-
     
-    t = 2 #Choisi nottament grace à testSeuil
-    T = 10*nb_data/10
+    t = 2.5 #Choisi nottament grace à testSeuil
+    T = 9.8*nb_data/10 #98% des données
     K = 100
-    sel_temperature, sel_tps, X_ransac, sigma0_2_ransac, Qlchap_ransac, Qvchap_ransac, Qxchap_ransac, lchap_ransac, vchap_ransac = ransac(t, T, K, temperature, tps)
+    sel_temperature, sel_tps, X_ransac, sigma0_2_ransac, Qlchap_ransac, Qvchap_ransac, Qxchap_ransac, lchap_ransac, vchap_ransac, vnorm_ransac = ransac(t, T, K, temperature, tps)
 
     
     plt.figure()
     plt.plot(tps,temperature, "o", label = "Observations")
-    plt.plot(sel_tps,sel_temperature, "o", label = "Observations sélectionnées")
+    plt.plot(sel_tps,sel_temperature, ".", label = "Observations sélectionnées")
+    plt.show()
+    
+    plt.figure()
+    plt.plot(sel_tps,sel_temperature, ".", label = "Observations sélectionnées")
+
     plt.plot(tps, mod(tps,X_ransac))
     titre = "Température maximales à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
     plt.title(titre)
@@ -450,8 +407,25 @@ if __name__=="__main__":
     plt.legend()
     plt.show()
     
-    # Histogramme des résidus simples de Ransac
-    grapheHisto(vchap_ransac,sigma0_2_ransac,mode="simple")
+    # Affichage des résultats de RANSAC sur un échantillon des 150 années (20 ans)
+    plt.figure()
+    plt.plot(tps[50:50+20*12,:],temperature[50:50+20*12,:], label = "Observations")
+    plt.plot(tps[50:50+20*12,:], mod(tps[50:50+20*12,:],X_ransac), label = "Modèle issus de RANSAC")
+    titre = "Zoom sur les températures maximales à Oxford de " + str(date_deb+50) + " à " + str(date_deb+70)
+    plt.title(titre)
+    plt.xlabel("temps [annees]")
+    plt.ylabel("temperature [°C]")
+    plt.legend()
+    plt.show()
+    
+    # Histogramme des résidus normalisés de Ransac
+    grapheHisto(vnorm_ransac,sigma0_2_ransac,mode="normalized")
+    #Test du Chi-2
+    print("Résultats du test du Chi-2 : ", testChi2(sigma0_2_ransac,len(sel_tps),4,0.95))
+    #Affichage des paramètres
+    print("Paramètres estimés: ",X_ransac)  
+    #Matrice de variance covariance des paramètres
+    print("Matrice de variance-covariance des paramètres: ",Qxchap_ransac) 
  
-    print(len(sel_tps))
-    print(len(sel_tps)*100/1800, '%')
+    #print(len(sel_tps))
+    print("Pourcentage de point gardés", len(sel_tps)*100/nb_data, '%')
