@@ -19,10 +19,12 @@ from scipy.stats import chi2, norm
 #                                                                           #
 #############################################################################
 
+#def testChi2(sigma0_2,n,p):
+#    pass
 
 def PtsFaux(obs,modele,tps,residus_norm,sigma0_2):
-    coord = np.where(abs(obs-modele)<3)
-#    coord = np.where(abs(residus_norm)<2*sigma0_2)
+#    coord = np.where(abs(obs-modele)<2.5)
+    coord = np.where(abs(residus_norm)<2*np.sqrt(sigma0_2))
     newObs = np.zeros((len(coord[0]),1))
     newTps = np.zeros((len(coord[0]),1))
     c = 0
@@ -56,7 +58,7 @@ def grapheHisto(residus,variance,mode="normalized"):
     else:
         plt.title("Histogramme des résidus")
     (n, bins, patches) = plt.hist(residus)
-    x = np.arange(bins[0],bins[-1])
+    x = np.arange(bins[0],bins[-1],0.2)
     x = x.reshape(x.shape[0],1)
     if np.size(n)%2 == 0:
         A = n[int(np.size(n)/2)]
@@ -90,7 +92,7 @@ def mod(tps, param):
 
 
 
-def MC(temperature,tps,mode):
+def MC(temperature,tps):
     """
     Méthode des Moindres carrés
     """
@@ -145,15 +147,40 @@ def MC(temperature,tps,mode):
         X = Xchap
         
         cpt += 1
-
-    # Elimination des points faux : récursion
-    if mode == "elim" :
-        l,tps_bis = PtsFaux(temperature,mod(tps,X),tps,vnorm,sigma0_2)
-        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm = MC(l,tps_bis,mode="notELim")
     
     return (X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm)
 
 
+
+
+def MC_elim(temperature,tps):
+    """
+    Méthode des Moindres carrés avec Elimination des points faux
+    """
+    # Initialisation
+    nb_ptsFaux = 0
+    l, tps_bis = temperature, tps
+    nb_ptfaux1 = len(temperature)- len(l)
+    nb_ptfaux2 = 0.1
+    X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm = MC(temperature,tps)
+    
+    # Elimination des points faux : Appel de la fonction MC
+    while nb_ptfaux2 != nb_ptfaux1 and len(l)>0 :
+        l_bis,tps_bis = PtsFaux(l,mod(tps_bis,X),tps_bis,vnorm,sigma0_2)
+        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm = MC(l_bis,tps_bis)
+        l = l_bis
+        nb_ptfaux2 = nb_ptfaux1
+        nb_ptfaux1 = len(temperature)- len(l)
+    
+    plt.figure()
+    plt.plot(tps,temperature,'o')
+    plt.plot(tps_bis,l_bis,'.')
+    plt.show()
+     
+    nb_ptsFaux = (len(temperature)-len(tps_bis)) / len(temperature)*100
+    print("Points faux : ",nb_ptsFaux,"%")
+    
+    return (X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm)
 
 
     
@@ -203,7 +230,7 @@ def ransac(t,T,K,temperature, tps):
 #        plt.ylabel("temperature [°C]")
 #        plt.show()
         
-        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap, vnorm = MC(jd_temperature,jd_tps,mode="notElim")
+        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap, vnorm = MC(jd_temperature,jd_tps)
         
         # Selection des points qui collent au modèle
         for i in range (nb_data):
@@ -223,7 +250,7 @@ def ransac(t,T,K,temperature, tps):
             arr_ens_pts_temperature = np.reshape(meilleur_ens_pts_temperature,(len(meilleur_ens_pts_temperature),1))
             arr_ens_pts_tps = np.reshape(meilleur_ens_pts_tps,(len(meilleur_ens_pts_tps),1))
     
-            X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap, vnorm = MC(arr_ens_pts_temperature, arr_ens_pts_tps, mode="notElim")
+            X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap, vnorm = MC(arr_ens_pts_temperature, arr_ens_pts_tps)
             
             break
         
@@ -235,7 +262,7 @@ def ransac(t,T,K,temperature, tps):
         arr_ens_pts_temperature = np.reshape(meilleur_ens_pts_temperature,(len(meilleur_ens_pts_temperature),1))
         arr_ens_pts_tps = np.reshape(meilleur_ens_pts_tps,(len(meilleur_ens_pts_tps),1))
         
-        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap, vnorm = MC(arr_ens_pts_temperature, arr_ens_pts_tps, mode="notElim")
+        X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap, vnorm = MC(arr_ens_pts_temperature, arr_ens_pts_tps)
     
     return (meilleur_ens_pts_temperature, meilleur_ens_pts_tps, X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap)
 
@@ -290,7 +317,7 @@ if __name__=="__main__":
     
     print("---------------------------MOINDRES-CARRES-----------------------------------")
     # Calcul des moindres-carrés
-    X_MC, sigma0_2_MC, Qlchap_MC, Qvchap_MC, Qxchap_MC, lchap_MC, vchap_MC, vnorm_MC = MC(temperature,tps,mode="notElim")
+    X_MC, sigma0_2_MC, Qlchap_MC, Qvchap_MC, Qxchap_MC, lchap_MC, vchap_MC, vnorm_MC = MC(temperature,tps)
     
     # Affichage des résultats des MC pour l'ensemble des données (150 années)
     plt.figure()
@@ -358,7 +385,7 @@ if __name__=="__main__":
     
     print("------------------MOINDRES-CARRES ELIMINATION PTS FAUX-----------------------")
     # Calcul des moindres-carré
-    X_MC2, sigma0_2_MC2, Qlchap_MC2, Qvchap_MC2, Qxchap_MC2, lchap_MC2, vchap_MC2,vnorm_MC2 = MC(temperature,tps,mode="elim")
+    X_MC2, sigma0_2_MC2, Qlchap_MC2, Qvchap_MC2, Qxchap_MC2, lchap_MC2, vchap_MC2,vnorm_MC2 = MC_elim(temperature,tps)
     
     # Affichage des résultats des MC sur l'ensemble du jeu de données (150 ans)
     plt.figure()
@@ -402,36 +429,29 @@ if __name__=="__main__":
     Puis vérification du modèle.
     """
     
-#    print("------------------------------RANSAC--------------------------------------")
-#    
-#
-#    
-#    t = 2 #Choisi nottament grace à testSeuil
-#    T = 10*nb_data/10
-#    K = 100
-#    sel_temperature, sel_tps, X_ransac, sigma0_2_ransac, Qlchap_ransac, Qvchap_ransac, Qxchap_ransac, lchap_ransac, vchap_ransac = ransac(t, T, K, temperature, tps)
-#
-#    
-#    plt.figure()
-#    plt.plot(tps,temperature, "o", label = "Observations")
-#    plt.plot(sel_tps,sel_temperature, "o", label = "Observations sélectionnées")
-#    plt.plot(tps, mod(tps,X_ransac))
-#    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
-#    plt.title(titre)
-#    plt.xlabel("temps [annees]")
-#    plt.ylabel("temperature [°C]")
-#    plt.legend()
-#    plt.show()
-#        
-#        
-#    plt.figure()
-#    plt.title("Histogramme des résidus avec la méthode ransac")
-#    # Afficher la courbe de la loi normale de moyenne 0 et d'écart type sigma0
-#    #x = np.linspace(0, 6*np.sqrt(sigma0_2), 100)
-#    #plt.plot(x,sc.stats.norm.pdf(x,0,np.sqrt(sigma0_2)))
-#    plt.hist(vchap_ransac)
-#    plt.show()
-#    print ('Sigma0_2 :', sigma0_2_ransac[0][0])
-# 
-#    print(len(sel_tps))
-#    print(len(sel_tps)*100/1800, '%')
+    print("------------------------------RANSAC--------------------------------------")
+    
+
+    
+    t = 2 #Choisi nottament grace à testSeuil
+    T = 10*nb_data/10
+    K = 100
+    sel_temperature, sel_tps, X_ransac, sigma0_2_ransac, Qlchap_ransac, Qvchap_ransac, Qxchap_ransac, lchap_ransac, vchap_ransac = ransac(t, T, K, temperature, tps)
+
+    
+    plt.figure()
+    plt.plot(tps,temperature, "o", label = "Observations")
+    plt.plot(sel_tps,sel_temperature, "o", label = "Observations sélectionnées")
+    plt.plot(tps, mod(tps,X_ransac))
+    titre = "Precipitation à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
+    plt.title(titre)
+    plt.xlabel("temps [annees]")
+    plt.ylabel("temperature [°C]")
+    plt.legend()
+    plt.show()
+    
+    # Histogramme des résidus simples de Ransac
+    grapheHisto(vchap_ransac,sigma0_2_ransac,mode="simple")
+ 
+    print(len(sel_tps))
+    print(len(sel_tps)*100/1800, '%')
