@@ -29,14 +29,19 @@ def PtsFaux2(poids,residus):
     poids[ir][ir] = 0.0
     return poids
 
-def PtsFaux(obs,compObs):
-    temp = []
-    for i in range(obs.shape[0]):
-        if abs(obs[i]-compObs[i])>3:
-            temp.append(obs[i])
-    temp = np.asarray(temp)
-    temp.reshape(len(temp),1)
-    return temp
+def PtsFaux(obs,modele,tps):
+    newTps = []
+    newObs = []
+    #for i in range(obs.shape[0]):
+    coord = np.where(abs(obs-modele)<3)
+    for i in range(len(coord[0])):
+        newTps.append(tps[i])
+        newObs.append(obs[i])
+    newObs = np.asarray(newObs)
+    newObs.reshape(len(newObs),1)
+    newTps = np.asarray(newObs)
+    newTps.reshape(len(newObs),1)
+    return newObs,newTps
 
 
 def testSeuil(residus, seuil):
@@ -106,6 +111,7 @@ def MC(temperature,tps,mode):
 
     # Données
     l = temperature
+    tps_bis = tps
     nb_data = np.size(l)
     
     # Matrice de poids : identité par défaut
@@ -116,52 +122,57 @@ def MC(temperature,tps,mode):
     sigma0_2_last = [[10000.0]]
     sigma0_2 = [[13000.0]]
     
+    cpt = 0
     # Itérations 
-    while abs(sigma0_2[0][0]-sigma0_2_last[0][0]) > 10e-6:
+    while abs(sigma0_2[0][0]-sigma0_2_last[0][0]) > 10e-6 :
         # Matrice A jacobienne du modèle linéarisé
         A = np.ones((nb_data,4))
-        A[:,0] = np.cos(X[1,0]*tps[:,0] + X[2,0])
-        A[:,1] = -X[0,0]*tps[:,0]*np.sin(X[1,0]*tps[:,0] + X[2,0])
-        A[:,2] = -X[0,0]*np.sin(X[1,0]*tps[:,0] + X[2,0])
-        B = l - mod(tps,X).reshape((nb_data,1))
-        
+        A[:,0] = np.cos(X[1,0]*tps_bis[:,0] + X[2,0])
+        A[:,1] = -X[0,0]*tps_bis[:,0]*np.sin(X[1,0]*tps_bis[:,0] + X[2,0])
+        A[:,2] = -X[0,0]*np.sin(X[1,0]*tps_bis[:,0] + X[2,0])
+        B = l - mod(tps_bis,X).reshape((nb_data,1))
+
         # N = A.T*P*A, K = A.T*P*B
         N = np.dot(np.dot(A.T,P),A)
         K = np.dot(np.dot(A.T,P),B)
-        
+
         # dXchap = inv(N)*K
         dXchap = np.dot(np.linalg.inv(N),K)
-        
         Xchap = X + dXchap
 
         # Résidus
         vchap = B - np.dot(A,dXchap)
         lchap = l - vchap
+
         # Matrice de variance covariance
         Qxchap = np.linalg.inv(np.dot(np.dot(np.transpose(A),P),A))
         Qvchap = Ql - np.dot(np.dot(A,Qxchap),A.T)
         Qlchap = Ql - Qvchap
         # Résidus normalisés
-        vnorm = np.divide(vchap,(np.sqrt(np.diag(Qvchap))).reshape(1800,1))
+        vnorm = np.divide(vchap,(np.sqrt(np.diag(Qvchap))).reshape(nb_data,1))
 
         sigma0_2_last = sigma0_2
         sigma0_2 = np.dot(np.dot(vchap.T,P),vchap)/(nb_data - 4)
-
+        print(sigma0_2)
         X = Xchap
         
-        if mode == "elim" :
+        #if mode == "elim" :
             #sol1
-            P = PtsFaux2(P,vchap)
-            #sol2
-#            l = PtsFaux(l,lchap)
-#            nb_data = np.size(l)
-#            Ql = np.eye(nb_data)
-#            P = np.linalg.inv(Ql)
-#            """
-#            Probleme quand on rentre pour la 2e fois dans la boucle : 
-#                l'algo n'aime pas changer de dimension pour A
-#                ValueError: could not broadcast input array from shape (1800) into shape (156)
-#            """
+            #P = PtsFaux2(P,vchap)
+#            #sol2
+    #        print(nb_data)
+    #        l,tps_bis = PtsFaux(temperature,mod(tps,X),tps)
+    #        nb_data = np.size(l)
+    #        Ql = np.eye(nb_data)
+    #        P = np.linalg.inv(Ql)
+        
+        cpt += 1
+        print(cpt)
+        """
+        Probleme quand on rentre pour la 2e fois dans la boucle : 
+            l'algo n'aime pas changer de dimension pour A
+            ValueError: could not broadcast input array from shape (1800) into shape (156)
+        """
 
     
     return (X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm)
