@@ -25,7 +25,7 @@ def testChi2(sigma0_2,n,p, prob):
     # -- Calcul des bornes de la loi du chi2 à n-p degrés de liberté pour des probabilité a/2 et 1-a/2 --
     borne_inf = chi2.ppf(a/2,n-p)/(n-p)
     borne_sup = chi2.ppf(1-a/2,n-p)/(n-p)
-    print("Chi2 borne inférieure: ",borne_inf)
+    print("\n","Chi2 borne inférieure: ",borne_inf)
     print("Chi2 borne supérieure: ",borne_sup)
     if borne_inf<=sigma0_2<=borne_sup:
         return True
@@ -290,6 +290,7 @@ if __name__=="__main__":
     
     #param, b = sc.optimize.curve_fit(mod,[i for i in range (nb_annee*12)],data[96:nb_annee*12+96,2])
     
+    # Affichage de l'ensemble des observations
     plt.figure()
     plt.plot(tps,temperature)
     titre = "Températures maximales à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
@@ -303,13 +304,16 @@ if __name__=="__main__":
     Il y a donc 4 paramètres.    
     """
     
-    """ Initialisation des matrices pour les moindres carrées """
+    # Initialisation des matrices pour les moindres carrées
     nb_data = temperature.shape[0]
-    
+
+
+
     print("---------------------------MOINDRES-CARRES-----------------------------------")
+
     # Calcul des moindres-carrés
     X_MC, sigma0_2_MC, Qlchap_MC, Qvchap_MC, Qxchap_MC, lchap_MC, vchap_MC, vnorm_MC = MC(temperature,tps)
-    
+
     # Affichage des résultats des MC pour l'ensemble des données (150 années)
     plt.figure()
     plt.plot(tps,temperature, label = "Observations")
@@ -320,7 +324,7 @@ if __name__=="__main__":
     plt.ylabel("temperature [°C]")
     plt.legend()
     plt.show()
-    
+
     # Affichage des résultats des MC sur un échantillon des 150 années (20 ans)
     plt.figure()
     plt.plot(tps[50:50+20*12,:],temperature[50:50+20*12,:], label = "Observations")
@@ -331,19 +335,23 @@ if __name__=="__main__":
     plt.ylabel("temperature [°C]")
     plt.legend()
     plt.show()
-       
-    
+
     #Histogramme des résidus normalisés sans suppression des points faux    
     grapheHisto(vnorm_MC,sigma0_2_MC,mode="normalized")
 
     #Test du Chi-2
-    print("Résultats du test du Chi-2 : ", testChi2(sigma0_2_MC,len(temperature),4,0.95))
+    print("\n","Résultats du test du Chi-2 : ", testChi2(sigma0_2_MC,len(temperature),4,0.95))
     #Affichage des paramètres
-    print("Paramètres estimés: ",X_MC)  
+    print("\n","Paramètres estimés: ","\n",X_MC)  
     #Matrice de variance covariance des paramètres
-    print("Matrice de variance-covariance des paramètres: ",Qxchap_MC)        
-#    
+    print("\n","Matrice de variance-covariance des paramètres: ","\n",Qxchap_MC)    
+
+    
+    
+
+    
     print("------------------MOINDRES-CARRES ELIMINATION PTS FAUX-----------------------")
+
     # Calcul des moindres-carré
     X_MC2, sigma0_2_MC2, Qlchap_MC2, Qvchap_MC2, Qxchap_MC2, lchap_MC2, vchap_MC2,vnorm_MC2, nb_ptselim = MC_elim(temperature,tps)
 
@@ -357,7 +365,7 @@ if __name__=="__main__":
     plt.ylabel("temperature [°C]")
     plt.legend()
     plt.show()
-    
+
     # Affichage des résultats des MC sur un échantillon des 150 années (20 ans)
     plt.figure()
     plt.plot(tps[50:50+20*12,:],temperature[50:50+20*12,:], label = "Observations")
@@ -368,65 +376,78 @@ if __name__=="__main__":
     plt.ylabel("temperature [°C]")
     plt.legend()
     plt.show()
-        
-    
+
     # Histogramme des résidus normalisés avec suppression des points faux    
     grapheHisto(vnorm_MC2,sigma0_2_MC2,mode="normalized")
-    
-    #Test du Chi-2
-    print("Résultats du test du Chi-2 : ", testChi2(sigma0_2_MC2,nb_ptselim,4,0.95))  
 
+    #Test du Chi-2
+    print("\n","Résultats du test du Chi-2 : ", testChi2(sigma0_2_MC2,nb_ptselim,4,0.95))  
     #Affichage des paramètres
-    print("Paramètres estimés: ",X_MC2)      
-    
-    
+    print("\n","Paramètres estimés: ","\n",X_MC2)      
     #Matrice de variance covariance des paramètres
-    print("Matrice de variance-covariance des paramètres: ",Qxchap_MC2)
-#        
+    print("\n","Matrice de variance-covariance des paramètres: ","\n",Qxchap_MC2)
+
+
+
+
+
     print("------------------------------RANSAC--------------------------------------")
-    
     
     t = 2.5 #Choisi nottament grace à testSeuil
     T = 9.8*nb_data/10 #98% des données
     K = 100
     sel_temperature, sel_tps, X_ransac, sigma0_2_ransac, Qlchap_ransac, Qvchap_ransac, Qxchap_ransac, lchap_ransac, vchap_ransac, vnorm_ransac = ransac(t, T, K, temperature, tps)
 
-    
+    # Affichage des observations conservées sur l'ensemble des observations du départ
     plt.figure()
+    plt.title("Observations conservées et supprimées")
     plt.plot(tps,temperature, "o", label = "Observations")
     plt.plot(sel_tps,sel_temperature, ".", label = "Observations sélectionnées")
+    plt.legend()
     plt.show()
-    
+
+    # Affichage des résultats de RANSAC sur l'ensemble des données (150 ans)
     plt.figure()
     plt.plot(sel_tps,sel_temperature, ".", label = "Observations sélectionnées")
-
-    plt.plot(tps, mod(tps,X_ransac))
+    plt.plot(tps, mod(tps,X_ransac),label="Modèle issu de RANSAC")
     titre = "Température maximales à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
     plt.title(titre)
     plt.xlabel("temps [annees]")
     plt.ylabel("temperature [°C]")
     plt.legend()
     plt.show()
-    
+
+    temperature_bis = temperature
+    coord = np.where(sel_temperature==temperature_bis)
+    tps_rans = np.zeros((len(coord[0]),1))
+    temp_rans = np.zeros((len(coord[0]),1))
+    c = 0
+    for i in coord[0]:
+        newObs[c] = obs[i]
+        newTps[c] = tps[i]
+        c += 1
+ 
     # Affichage des résultats de RANSAC sur un échantillon des 150 années (20 ans)
     plt.figure()
+    plt.plot(sel_tps[50:50+20*12,:],sel_temperature[50:50+20*12,:], label = "Observations conservées")
     plt.plot(tps[50:50+20*12,:],temperature[50:50+20*12,:], label = "Observations")
-    plt.plot(tps[50:50+20*12,:], mod(tps[50:50+20*12,:],X_ransac), label = "Modèle issus de RANSAC")
+    plt.plot(sel_tps[50:50+20*12,:], mod(sel_tps[50:50+20*12,:],X_ransac), label = "Modèle issu de RANSAC")
     titre = "Zoom sur les températures maximales à Oxford de " + str(date_deb+50) + " à " + str(date_deb+70)
     plt.title(titre)
     plt.xlabel("temps [annees]")
     plt.ylabel("temperature [°C]")
     plt.legend()
     plt.show()
-    
+
     # Histogramme des résidus normalisés de Ransac
     grapheHisto(vnorm_ransac,sigma0_2_ransac,mode="normalized")
+
     #Test du Chi-2
-    print("Résultats du test du Chi-2 : ", testChi2(sigma0_2_ransac,len(sel_tps),4,0.95))
+    print("\n","Résultats du test du Chi-2 : ", testChi2(sigma0_2_ransac,len(sel_tps),4,0.95))
     #Affichage des paramètres
-    print("Paramètres estimés: ",X_ransac)  
+    print("\n","Paramètres estimés: ","\n",X_ransac)  
     #Matrice de variance covariance des paramètres
-    print("Matrice de variance-covariance des paramètres: ",Qxchap_ransac) 
- 
+    print("\n","Matrice de variance-covariance des paramètres: ","\n",Qxchap_ransac) 
+
     #print(len(sel_tps))
-    print("Pourcentage de point gardés", len(sel_tps)*100/nb_data, '%')
+    print("\n","Pourcentage de point gardés", len(sel_tps)*100/nb_data, '%')
