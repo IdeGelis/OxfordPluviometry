@@ -175,14 +175,12 @@ def MC_elim(temperature,tps):
     X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm = MC(temperature,tps)
     
     # Elimination des points faux : Appel de la fonction MC
-    cpt = 0
-    while nb_ptfaux2 != nb_ptfaux1 and len(l)>0 and cpt<600000:
+    while nb_ptfaux2 != nb_ptfaux1 and len(l)>0 :
         l_bis,tps_bis = PtsFaux(l,mod(tps_bis,X),tps_bis,vnorm,sigma0_2)
         X, sigma0_2, Qlchap, Qvchap, Qxchap, lchap, vchap,vnorm = MC(l_bis,tps_bis)
         l = l_bis
         nb_ptfaux2 = nb_ptfaux1
         nb_ptfaux1 = len(temperature) - len(l)
-        cpt +=1
     
     plt.figure()
     plt.title("Visualisation des observations conservées")
@@ -408,6 +406,7 @@ if __name__=="__main__":
 
     # Affichage des résultats de RANSAC sur l'ensemble des données (150 ans)
     plt.figure()
+    plt.plot(tps,temperature, ".", label = "Observations")
     plt.plot(sel_tps,sel_temperature, ".", label = "Observations sélectionnées")
     plt.plot(tps, mod(tps,X_ransac),label="Modèle issu de RANSAC")
     titre = "Température maximales à Oxford de " + str(date_deb) + " à " + str(date_deb+nb_annee)
@@ -417,21 +416,11 @@ if __name__=="__main__":
     plt.legend()
     plt.show()
 
-    temperature_bis = temperature
-    coord = np.where(sel_temperature==temperature_bis)
-    tps_rans = np.zeros((len(coord[0]),1))
-    temp_rans = np.zeros((len(coord[0]),1))
-    c = 0
-    for i in coord[0]:
-        newObs[c] = obs[i]
-        newTps[c] = tps[i]
-        c += 1
  
     # Affichage des résultats de RANSAC sur un échantillon des 150 années (20 ans)
     plt.figure()
-    plt.plot(sel_tps[50:50+20*12,:],sel_temperature[50:50+20*12,:], label = "Observations conservées")
     plt.plot(tps[50:50+20*12,:],temperature[50:50+20*12,:], label = "Observations")
-    plt.plot(sel_tps[50:50+20*12,:], mod(sel_tps[50:50+20*12,:],X_ransac), label = "Modèle issu de RANSAC")
+    plt.plot(tps[50:50+20*12,:], mod(tps[50:50+20*12,:],X_ransac), label = "Modèle issu de RANSAC")
     titre = "Zoom sur les températures maximales à Oxford de " + str(date_deb+50) + " à " + str(date_deb+70)
     plt.title(titre)
     plt.xlabel("temps [annees]")
